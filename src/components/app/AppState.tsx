@@ -3,12 +3,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Provider } from "react-redux";
 import { makeStore, type AppStore } from "@/lib/store";
-import type { Product } from "@/lib/types/api";
+import type { MockRole, Product } from "@/lib/types/api";
+import { api } from "@/lib/api/farmnomad";
 
 export type Theme = "system" | "light" | "dark";
 type ProductSheet = { mode: "new" } | { mode: "edit"; product: Product } | null;
 
 type Ctx = {
+  role: MockRole;
+  setRole: (r: MockRole) => void;
   theme: Theme;
   setTheme: (t: Theme) => void;
   resolvedDark: boolean;
@@ -50,6 +53,7 @@ export function AppState({ children }: { children: ReactNode }) {
   if (!storeRef.current) storeRef.current = makeStore();
 
   const [theme, setThemeState] = useState<Theme>("system");
+  const [role, setRoleState] = useState<MockRole>(() => read<MockRole>("fn_role", "FARMER"));
   const [systemDark, setSystemDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
@@ -71,6 +75,12 @@ export function AppState({ children }: { children: ReactNode }) {
     setThemeState(t);
     write("fn_theme", t);
   }, []);
+  const setRole = useCallback((r: MockRole) => {
+    write("fn_role", r);
+    setRoleState(r);
+    // Different user, different data: drop everything cached for the previous role.
+    storeRef.current?.dispatch(api.util.resetApiState());
+  }, []);
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
       write("fn_sidebar_collapsed", !c);
@@ -80,6 +90,8 @@ export function AppState({ children }: { children: ReactNode }) {
 
   const value = useMemo<Ctx>(
     () => ({
+      role,
+      setRole,
       theme,
       setTheme,
       resolvedDark: theme === "dark" || (theme === "system" && systemDark),
@@ -94,7 +106,7 @@ export function AppState({ children }: { children: ReactNode }) {
       surplusSheet,
       setSurplusSheet,
     }),
-    [theme, setTheme, systemDark, collapsed, toggleCollapsed, mobileNav, command, productSheet, surplusSheet],
+    [role, setRole, theme, setTheme, systemDark, collapsed, toggleCollapsed, mobileNav, command, productSheet, surplusSheet],
   );
 
   return (

@@ -96,3 +96,17 @@ export function daysUntil(iso: string, now = new Date()) {
   const b = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
   return Math.round((b - a) / 86_400_000);
 }
+
+export interface CartItem {
+  id: number;
+  productId: number;
+  quantity: number;
+  product?: Product;
+}
+
+export interface CheckoutSession {
+  sessionId: string;
+  checkoutUrl: string;
+}
+
+export type MockRole = Extract<Role, "FARMER" | "CUSTOMER">;

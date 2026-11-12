@@ -1,16 +1,18 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
-import { Bell, Check, HandHeart, List, Package, Receipt } from "@phosphor-icons/react/dist/ssr";
-import { useMarkNotificationReadMutation, useMyNotificationsQuery } from "@/lib/api/farmnomad";
+import { Bell, Check, HandHeart, List, Package, Receipt, ShoppingBagOpen } from "@phosphor-icons/react/dist/ssr";
+import { useGetCartQuery, useMarkNotificationReadMutation, useMyNotificationsQuery } from "@/lib/api/farmnomad";
+import { HOME, NAV, allNav } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 import { AppState, useApp } from "./AppState";
 import { CommandMenu } from "./CommandMenu";
 import { ProductSheet } from "./ProductSheet";
-import { NAV, Sidebar } from "./Sidebar";
+import { Sidebar, useCounts } from "./Sidebar";
 import { SurplusSheet } from "./SurplusSheet";
 import { IconButton, relDay, time } from "./ui";
 import { useShortcuts } from "./useShortcuts";
@@ -28,11 +30,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function Frame({ children }: { children: ReactNode }) {
-  const { theme, resolvedDark, mobileNav, setMobileNav } = useApp();
+  const { role, theme, resolvedDark, mobileNav, setMobileNav } = useApp();
   const path = usePathname();
+  const router = useRouter();
   useShortcuts();
 
   useEffect(() => setMobileNav(false), [path, setMobileNav]);
+
+  // Keep each role on its own pages (stand-in for RoleGuard until real auth lands).
+  const farmerOnly = ["/dashboard/farmer", "/products", "/surplus/manage"];
+  const customerOnly = ["/cart", "/checkout"];
+  const blocked = (role === "CUSTOMER" ? farmerOnly : customerOnly).some((r) => path === r || path.startsWith(r + "/"));
+  useEffect(() => {
+    if (blocked) router.replace(HOME[role]);
+  }, [blocked, role, router]);
 
   return (
     <div className="fn-app flex h-[100dvh] overflow-hidden" data-theme={theme === "system" ? undefined : theme}>
@@ -60,7 +71,8 @@ function Frame({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
-        <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+        <main className={cn("min-h-0 flex-1 overflow-y-auto", role === "CUSTOMER" && "pb-16 md:pb-0")}>{blocked ? null : children}</main>
+        {role === "CUSTOMER" && <TabBar />}
       </div>
 
       <CommandMenu />
@@ -69,6 +81,7 @@ function Frame({ children }: { children: ReactNode }) {
       <Toaster
         theme={resolvedDark ? "dark" : "light"}
         position="bottom-right"
+        mobileOffset={{ bottom: role === "CUSTOMER" ? 76 : 16 }}
         closeButton
         toastOptions={{ style: { fontFamily: "var(--font-ui)", fontSize: 13, borderRadius: 10 } }}
       />
@@ -78,19 +91,20 @@ function Frame({ children }: { children: ReactNode }) {
 
 function TopBar() {
   const path = usePathname();
-  const { setMobileNav } = useApp();
-  const page = NAV.find((n) => path === n.href || path.startsWith(n.href + "/"));
+  const { role, setMobileNav } = useApp();
+  const page = path.startsWith("/checkout") ? { label: "Checkout" } : allNav.find((n) => path === n.href || path.startsWith(n.href + "/"));
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-app-line px-3 md:px-5">
       <IconButton label="Open menu" className="md:hidden" onClick={() => setMobileNav(true)}>
         <List className="size-[18px]" />
       </IconButton>
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-app-muted">
-        <span className="hidden sm:inline">Hollins Farm</span>
+        <span className="hidden sm:inline">{role === "FARMER" ? "Hollins Farm" : "FarmNomad"}</span>
         <span className="hidden text-app-faint sm:inline">/</span>
         <span className="truncate font-medium text-app-text">{page?.label ?? "FarmNomad"}</span>
       </nav>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-1">
+        {role === "CUSTOMER" && <CartButton />}
         <Notifications />
       </div>
     </header>
@@ -169,5 +183,56 @@ function Notifications() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function CartButton() {
+  const { data } = useGetCartQuery();
+  const n = data?.reduce((s, i) => s + i.quantity, 0) ?? 0;
+  return (
+    <Link
+      href="/cart"
+      aria-label={n ? `Cart, ${n} item${n === 1 ? "" : "s"}` : "Cart"}
+      className="relative grid size-8 place-items-center rounded-[7px] text-app-muted transition-[background-color,color,transform] duration-150 hover:bg-app-hover hover:text-app-text active:scale-[0.94]"
+    >
+      <ShoppingBagOpen className="size-[18px]" />
+      <AnimatePresence>
+        {n > 0 && (
+          <motion.span
+            key={n}
+            className="num absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-app-primary px-1 text-[10px] font-semibold text-app-on-primary"
+            initial={{ transform: "scale(0.6)", opacity: 0 }}
+            animate={{ transform: "scale(1)", opacity: 1 }}
+            transition={{ type: "spring", duration: 0.35, bounce: 0.35 }}
+          >
+            {n}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </Link>
+  );
+}
+
+/** Customer is mobile-first (spec §6): bottom tabs on phones for the four things they do most. */
+function TabBar() {
+  const path = usePathname();
+  const counts = useCounts("CUSTOMER");
+  const tabs = NAV.CUSTOMER.filter((n) => n.release === "R1");
+  return (
+    <nav aria-label="Tabs" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-app-line bg-app-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      {tabs.map(({ href, label, icon: Icon }) => {
+        const active = path === href || path.startsWith(href + "/") || (href === "/cart" && path.startsWith("/checkout"));
+        const n = counts[href];
+        return (
+          <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors", active ? "text-app-text" : "text-app-faint")}>
+            <span className="relative">
+              <Icon weight={active ? "fill" : "regular"} className={cn("size-[22px]", active && "text-app-accent")} />
+              {!!n && <span className="num absolute -right-2 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-app-primary px-1 text-[9px] font-semibold text-app-on-primary">{n}</span>}
+            </span>
+            {label.replace("My orders", "Orders")}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

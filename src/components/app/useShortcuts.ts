@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useApp } from "./AppState";
-import { NAV } from "./Sidebar";
+import { NAV } from "@/lib/navigation";
 
 const typing = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
@@ -16,7 +16,7 @@ const typing = (t: EventTarget | null) => {
  */
 export function useShortcuts() {
   const router = useRouter();
-  const { setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet } = useApp();
+  const { role, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet } = useApp();
   const pendingG = useRef<number | null>(null);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function useShortcuts() {
       if (pendingG.current) {
         window.clearTimeout(pendingG.current);
         pendingG.current = null;
-        const dest = NAV.find((n) => n.key.toLowerCase() === k);
+        const dest = NAV[role].find((n) => n.key?.toLowerCase() === k);
         if (dest) {
           e.preventDefault();
           router.push(dest.href);
@@ -43,7 +43,7 @@ export function useShortcuts() {
         pendingG.current = window.setTimeout(() => (pendingG.current = null), 900);
         return;
       }
-      if (k === "c") {
+      if (k === "c" && role === "FARMER") {
         e.preventDefault();
         setProductSheet({ mode: "new" });
       }
@@ -51,5 +51,5 @@ export function useShortcuts() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [router, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet]);
+  }, [role, router, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet]);
 }

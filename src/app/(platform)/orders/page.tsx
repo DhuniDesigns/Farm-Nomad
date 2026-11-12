@@ -7,6 +7,8 @@ import { CaretDown, MapPin, Receipt, User as UserIcon } from "@phosphor-icons/re
 import { useListFarmerOrdersQuery, useListMyProductsQuery } from "@/lib/api/farmnomad";
 import type { Order, OrderStatus } from "@/lib/types/api";
 import { PageHeader } from "@/components/app/PageHeader";
+import { useApp } from "@/components/app/AppState";
+import { CustomerOrders } from "@/components/app/shop/CustomerOrders";
 import { Sheet } from "@/components/app/Sheet";
 import { ORDER_FLOW, paymentMeta, statusMeta } from "@/components/app/orderMeta";
 import { Avatar, EmptyState, Pill, Skeleton, gbp, orderRef, relDay, time } from "@/components/app/ui";
@@ -15,6 +17,11 @@ import { cn } from "@/lib/cn";
 const GROUPS: OrderStatus[] = ["PENDING", "ASSIGNED", "IN_TRANSIT", "DELIVERED", "CANCELLED"];
 
 export default function OrdersPage() {
+  const { role } = useApp();
+  return role === "CUSTOMER" ? <CustomerOrders /> : <FarmerOrders />;
+}
+
+function FarmerOrders() {
   const { data, isLoading } = useListFarmerOrdersQuery();
   const [openId, setOpenId] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ CANCELLED: true });

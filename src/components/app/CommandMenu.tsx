@@ -7,7 +7,8 @@ import Image from "next/image";
 import { Desktop, HandHeart, Moon, Plus, Sun, ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { useListMyProductsQuery } from "@/lib/api/farmnomad";
 import { useApp } from "./AppState";
-import { NAV } from "./Sidebar";
+import { NAV } from "@/lib/navigation";
+import { useListProductsQuery } from "@/lib/api/farmnomad";
 import { Kbd, gbp } from "./ui";
 
 /**
@@ -15,9 +16,12 @@ import { Kbd, gbp } from "./ui";
  * No open animation delay on repeat use: it scales in from 0.98 in 150ms and closes faster.
  */
 export function CommandMenu() {
-  const { command, setCommand, setProductSheet, setSurplusSheet, setTheme } = useApp();
+  const { role, command, setCommand, setProductSheet, setSurplusSheet, setTheme } = useApp();
+  const farmer = role === "FARMER";
   const router = useRouter();
-  const { data: products } = useListMyProductsQuery();
+  const { data: mine } = useListMyProductsQuery(undefined, { skip: !farmer });
+  const { data: market } = useListProductsQuery(undefined, { skip: farmer });
+  const products = farmer ? mine : market;
 
   const run = (fn: () => void) => {
     setCommand(false);
@@ -55,42 +59,45 @@ export function CommandMenu() {
             >
               <Command.Input
                 autoFocus
-                placeholder="Search products, pages and actions"
+                placeholder={farmer ? "Search products, pages and actions" : "Search produce, farms and pages"}
                 className="h-14 w-full border-b border-app-line bg-transparent px-5 text-[15px] text-app-text outline-none placeholder:text-app-faint"
               />
               <Command.List className="max-h-[min(420px,55vh)] overflow-y-auto overscroll-contain p-2 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:text-ui-sm [&_[cmdk-group-heading]]:text-app-faint">
                 <Command.Empty className="px-3 py-10 text-center text-app-muted">Nothing matches that. Try a product name.</Command.Empty>
 
-                <Command.Group heading="Actions">
+                {farmer && <Command.Group heading="Actions">
                   <Command.Item className={item} onSelect={() => run(() => setProductSheet({ mode: "new" }))}>
                     <Plus className="size-4" /> New product <Kbd className="ml-auto">C</Kbd>
                   </Command.Item>
                   <Command.Item className={item} onSelect={() => run(() => setSurplusSheet(true))}>
                     <HandHeart className="size-4" /> Flag surplus
                   </Command.Item>
-                </Command.Group>
+                </Command.Group>}
 
                 <Command.Group heading="Go to">
-                  {NAV.map(({ href, label, icon: Icon, key }) => (
+                  {NAV[role].map(({ href, label, icon: Icon, key }) => (
                     <Command.Item key={href} className={item} onSelect={() => run(() => router.push(href))}>
                       <Icon className="size-4" /> {label}
-                      <span className="ml-auto flex gap-1">
-                        <Kbd>G</Kbd>
-                        <Kbd>{key}</Kbd>
-                      </span>
+                      {key && (
+                        <span className="ml-auto flex gap-1">
+                          <Kbd>G</Kbd>
+                          <Kbd>{key}</Kbd>
+                        </span>
+                      )}
                     </Command.Item>
                   ))}
                 </Command.Group>
 
                 {!!products?.length && (
-                  <Command.Group heading="Products">
+                  <Command.Group heading={farmer ? "Your products" : "Produce"}>
                     {products.map((p) => (
                       <Command.Item
                         key={p.id}
-                        value={`${p.name} ${p.category ?? ""} ${p.tags?.join(" ") ?? ""}`}
+                        value={`${p.id} ${p.name} ${p.farmerName ?? ""} ${p.category ?? ""} ${p.tags?.join(" ") ?? ""}`}
                         className={item}
                         onSelect={() =>
                           run(() => {
+                            if (!farmer) return router.push(`/marketplace/${p.id}`);
                             router.push("/products");
                             setProductSheet({ mode: "edit", product: p });
                           })

@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
-import type { Notification, Order, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CartItem, CheckoutSession, Notification, Order, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 
 /**
  * One switch between sample data and the Spring Boot API.
@@ -27,7 +27,7 @@ const mockBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryErro
 export const api = createApi({
   reducerPath: "api",
   baseQuery: USE_MOCKS ? mockBaseQuery : realBaseQuery,
-  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me"],
+  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders"],
   endpoints: (b) => ({
     me: b.query<User, void>({ query: () => "/users/me", providesTags: ["Me"] }),
 
@@ -58,6 +58,53 @@ export const api = createApi({
     myNotifications: b.query<Notification[], void>({ query: () => "/notifications/my", providesTags: ["Notification"] }),
     markNotificationRead: b.mutation<Notification, number>({ query: (id) => ({ url: `/notifications/${id}/read`, method: "PUT" }), invalidatesTags: ["Notification"] }),
 
+    // ───────── Customer (spec §3.6–3.8, §7.5, §7.8, §7.9) ─────────
+    updateMe: b.mutation<User, { id: number } & Partial<User>>({
+      query: ({ id, ...body }) => ({ url: `/users/${id}`, method: "PUT", body }),
+      invalidatesTags: ["Me"],
+    }),
+    changePassword: b.mutation<{ ok: boolean }, { currentPassword: string; newPassword: string }>({
+      query: (body) => ({ url: "/auth/change-password", method: "POST", body }),
+    }),
+    login: b.mutation<{ token: string }, { email: string; password: string }>({ query: (body) => ({ url: "/auth/login", method: "POST", body }) }),
+    register: b.mutation<{ ok: boolean }, Record<string, string>>({ query: (body) => ({ url: "/auth/register", method: "POST", body }) }),
+
+    listProducts: b.query<Product[], void>({ query: () => "/products", providesTags: ["Market"] }),
+    getProduct: b.query<Product, number>({ query: (id) => `/products/${id}`, providesTags: ["Market"] }),
+
+    getCart: b.query<CartItem[], void>({ query: () => "/cart/items", providesTags: ["Cart"] }),
+    addToCart: b.mutation<CartItem, { productId: number; quantity: number }>({
+      query: (body) => ({ url: "/cart/items", method: "POST", body }),
+      invalidatesTags: ["Cart"],
+    }),
+    updateCartQty: b.mutation<CartItem, { itemId: number; quantity: number }>({
+      query: ({ itemId, quantity }) => ({ url: `/cart/items/${itemId}`, method: "PUT", params: { quantity } }),
+      // Optimistic: steppers feel instant, the server confirms behind.
+      async onQueryStarted({ itemId, quantity }, { dispatch, queryFulfilled }) {
+        const patch = dispatch(api.util.updateQueryData("getCart", undefined, (d) => {
+          const it = d.find((x) => x.id === itemId);
+          if (it) it.quantity = quantity;
+        }));
+        try {
+          await queryFulfilled;
+        } catch {
+          patch.undo();
+        }
+      },
+    }),
+    removeCartItem: b.mutation<CartItem, number>({ query: (itemId) => ({ url: `/cart/items/${itemId}`, method: "DELETE" }), invalidatesTags: ["Cart"] }),
+    clearCart: b.mutation<{ ok: boolean }, void>({ query: () => ({ url: "/cart/clear", method: "DELETE" }), invalidatesTags: ["Cart"] }),
+
+    createCheckoutSession: b.mutation<CheckoutSession, void>({ query: () => ({ url: "/checkout/create-session", method: "POST" }) }),
+    confirmCheckout: b.mutation<Order[], string>({
+      query: (sessionId) => ({ url: "/checkout/confirm", method: "POST", params: { sessionId } }),
+      invalidatesTags: ["Cart", "MyOrders", "Market"],
+    }),
+
+    myOrders: b.query<Order[], void>({ query: () => "/orders/my", providesTags: ["MyOrders"] }),
+    // CONFIRM WITH BACKEND: GET /orders/{id} is not documented (spec §10 Q2).
+    getOrder: b.query<Order, number>({ query: (id) => `/orders/${id}`, providesTags: ["MyOrders"] }),
+
     // CONFIRM WITH BACKEND: revenue analytics endpoint is not documented yet.
     farmerRevenue: b.query<{ date: string; value: number }[], void>({ query: () => "/analytics/farmer/revenue" }),
   }),
@@ -76,4 +123,19 @@ export const {
   useMyNotificationsQuery,
   useMarkNotificationReadMutation,
   useFarmerRevenueQuery,
+  useUpdateMeMutation,
+  useChangePasswordMutation,
+  useLoginMutation,
+  useRegisterMutation,
+  useListProductsQuery,
+  useGetProductQuery,
+  useGetCartQuery,
+  useAddToCartMutation,
+  useUpdateCartQtyMutation,
+  useRemoveCartItemMutation,
+  useClearCartMutation,
+  useCreateCheckoutSessionMutation,
+  useConfirmCheckoutMutation,
+  useMyOrdersQuery,
+  useGetOrderQuery,
 } = api;

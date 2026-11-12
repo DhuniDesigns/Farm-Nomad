@@ -99,3 +99,51 @@ export const revenueSeries = Array.from({ length: 90 }, (_, i) => {
   const wobble = Math.sin(i * 1.7) * 7 + Math.cos(i * 0.45) * 5;
   return { date: day.toISOString().slice(0, 10), value: Math.max(6, Math.round((base * weekend + wobble) * 100) / 100) };
 });
+
+// ───────── Customer side ─────────
+
+export const customer: User = {
+  id: 501,
+  fullName: "Amara Okafor",
+  email: "amara.okafor@example.com",
+  role: "CUSTOMER",
+  phoneNumber: "07700 900123",
+  address: "14 Fishergate Hill",
+  city: "Preston",
+  postcode: "PR1 8JA",
+  country: "United Kingdom",
+};
+
+const farms = {
+  ribble: { farmerId: 11, farmerName: "Ribble Fruit", pickupAddress: "Ribble Fruit, Longridge PR3 3XL" },
+  moss: { farmerId: 12, farmerName: "Moss Lane Farm", pickupAddress: "Moss Lane Farm, Ormskirk L39 4TA" },
+  fylde: { farmerId: 13, farmerName: "Fylde Growers", pickupAddress: "Fylde Growers, Kirkham PR4 2AB" },
+  bowland: { farmerId: 14, farmerName: "Bowland Dairy", pickupAddress: "Bowland Dairy, Clitheroe BB7 3DA" },
+};
+
+/** Everything listed on the marketplace: Hollins Farm's products plus other farms in the North West. */
+export const marketplace: Product[] = [
+  ...products.filter((p) => p.quantityAvailable > 0 && (!p.bestBeforeDate || p.bestBeforeDate >= iso(0))),
+  { id: 201, name: "Seasonal fruit box", category: "Fruit", price: 15, quantityAvailable: 18, bestBeforeDate: iso(7), coverImageUrl: "/images/crate-fruit-cut.webp", tags: ["Weekly", "Apples, pears, berries"], description: "Whatever's best from our orchards this week. Usually apples, pears and plums, with berries in summer.", createdAt: at(-14, 9), ...farms.ribble },
+  { id: 202, name: "Strawberries", category: "Fruit", price: 3.2, quantityAvailable: 40, bestBeforeDate: iso(3), coverImageUrl: "/images/strawberries-cut.webp", tags: ["400 g punnet"], description: "Picked in the morning, packed by lunchtime.", createdAt: at(-2, 7), ...farms.ribble },
+  { id: 203, name: "Surplus veg box", category: "Vegetables", price: 9, quantityAvailable: 14, bestBeforeDate: iso(4), coverImageUrl: "/images/crate-surplus-cut.webp", tags: ["Surplus", "Serves 2 to 3"], description: "Good produce that missed its order. Potatoes, onions and roots, at a lower price so nothing goes to waste.", createdAt: at(-1, 15), ...farms.moss },
+  { id: 204, name: "Free-range eggs", category: "Dairy", price: 3.1, quantityAvailable: 90, bestBeforeDate: iso(12), coverImageUrl: "/images/eggs-cut.webp", tags: ["Box of 6"], description: "Large eggs from hens on pasture.", createdAt: at(-3, 8), ...farms.moss },
+  { id: 205, name: "Rainbow carrots", category: "Vegetables", price: 1.9, quantityAvailable: 35, bestBeforeDate: iso(10), coverImageUrl: "/images/carrots-cut.webp", tags: ["Bunched"], description: "Orange, purple and yellow carrots, bunched with tops.", createdAt: at(-6, 10), ...farms.fylde },
+  { id: 206, name: "Beetroot", category: "Vegetables", price: 1.3, quantityAvailable: 0, bestBeforeDate: iso(15), coverImageUrl: "/images/beetroot-cut.webp", tags: ["Bunched"], createdAt: at(-8, 10), ...farms.fylde },
+  { id: 207, name: "Family veg box", category: "Vegetables", price: 22, quantityAvailable: 25, bestBeforeDate: iso(6), coverImageUrl: "/images/crate-stack-cut.webp", tags: ["Weekly", "Serves 4 to 5"], description: "A bigger box for families: roots, greens, salad and a little fruit.", createdAt: at(-20, 9), ...farms.fylde },
+  { id: 208, name: "Surplus grocery bag", category: "Other", price: 6.5, quantityAvailable: 9, bestBeforeDate: iso(2), coverImageUrl: "/images/bag-cut.webp", tags: ["Surplus", "Mixed"], description: "A mixed bag of surplus from farms on today's route: greens, peppers, eggs and more.", createdAt: at(0, 8), ...farms.bowland },
+];
+
+export const customerOrders: Order[] = [
+  { id: 2101, productId: 106, productName: "Mixed veg box", quantity: 2, status: "IN_TRANSIT", paymentStatus: "PAID", driverId: 901, driverName: "Grace Moore", d: 0, h: 9 },
+  { id: 2098, productId: 202, productName: "Strawberries", quantity: 2, status: "ASSIGNED", paymentStatus: "PAID", driverId: 900, driverName: "Sam Patel", d: 0, h: 8 },
+  { id: 2087, productId: 204, productName: "Free-range eggs", quantity: 1, status: "DELIVERED", paymentStatus: "PAID", driverId: 902, driverName: "Leo Hughes", d: -4, h: 11 },
+  { id: 2072, productId: 207, productName: "Family veg box", quantity: 1, status: "DELIVERED", paymentStatus: "PAID", driverId: 901, driverName: "Grace Moore", d: -11, h: 10 },
+  { id: 2060, productId: 203, productName: "Surplus veg box", quantity: 1, status: "CANCELLED", paymentStatus: "REFUNDED", driverId: null, driverName: null, d: -16, h: 14 },
+].map(({ d, h, ...o }) => ({ ...o, customerId: customer.id, customerName: customer.fullName, createdAt: at(d, h, 12) }) as Order);
+
+export const customerNotifications: Notification[] = [
+  { id: 41, recipientId: customer.id, type: "ORDER_UPDATE", message: "Grace Moore is on the way with your Mixed veg box", read: false, createdAt: at(0, 10, 5) },
+  { id: 42, recipientId: customer.id, type: "ORDER_UPDATE", message: "Ribble Fruit packed your strawberries", read: false, createdAt: at(0, 8, 40) },
+  { id: 43, recipientId: customer.id, type: "SYSTEM", message: "New this week: surplus boxes from Moss Lane Farm", read: true, createdAt: at(-1, 17) },
+];

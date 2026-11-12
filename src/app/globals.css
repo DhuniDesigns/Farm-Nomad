@@ -3,7 +3,17 @@
    Radius system: pill for anything you press, 20px for every card and photo frame. */
 @import "tailwindcss";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+/* Dark follows the system, unless the app's theme switch sets data-theme on .fn-app. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
 
 @theme {
   --color-*: initial;
