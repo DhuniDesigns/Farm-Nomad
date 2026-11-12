@@ -71,6 +71,10 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     if (password.length < 6) return { error: { status: 401, data: { message: "That email and password don't match." } } };
     return { data: { token: "mock-token" } };
   }],
+  ["POST", /^\/auth\/forgot-password$/, (_, r) => {
+    const { email } = (r.body ?? {}) as { email?: string };
+    return email && /\S+@\S+\.\S+/.test(email) ? { data: { ok: true } } : bad("Enter a full email address.");
+  }],
   ["POST", /^\/auth\/register$/, (_, r) => {
     const b = (r.body ?? {}) as { email?: string; password?: string; fullName?: string };
     if (!b.fullName || !b.email || !b.password) return bad("Fill in your name, email and password.");

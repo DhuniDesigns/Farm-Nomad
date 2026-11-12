@@ -67,6 +67,7 @@ export const api = createApi({
       query: (body) => ({ url: "/auth/change-password", method: "POST", body }),
     }),
     login: b.mutation<{ token: string }, { email: string; password: string }>({ query: (body) => ({ url: "/auth/login", method: "POST", body }) }),
+    forgotPassword: b.mutation<{ ok: boolean }, { email: string }>({ query: (body) => ({ url: "/auth/forgot-password", method: "POST", body }) }),
     register: b.mutation<{ ok: boolean }, Record<string, string>>({ query: (body) => ({ url: "/auth/register", method: "POST", body }) }),
 
     listProducts: b.query<Product[], void>({ query: () => "/products", providesTags: ["Market"] }),
@@ -127,6 +128,7 @@ export const {
   useChangePasswordMutation,
   useLoginMutation,
   useRegisterMutation,
+  useForgotPasswordMutation,
   useListProductsQuery,
   useGetProductQuery,
   useGetCartQuery,
