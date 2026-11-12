@@ -1,0 +1,133 @@
+/* FarmNomad marketing site, v3.
+   Palette family: Forest. Bone ground, forest green ground, one lime accent taken from the logo.
+   Radius system: pill for anything you press, 20px for every card and photo frame. */
+@import "tailwindcss";
+
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme {
+  --color-*: initial;
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Primitives */
+  --color-bone-50: #FFFFFF;
+  --color-bone-100: #F5F6F1;
+  --color-bone-200: #EAEDE4;
+  --color-mist: #DDE9D4;      /* pale field green for soft cards */
+  --color-moss: #426930;
+  --color-bone-300: #C9D0C3;
+  --color-pine-400: #5E6E64;
+  --color-pine-600: #3F4D45;
+  --color-pine-800: #1B2A22;
+  --color-pine-900: #0F1D16;
+  --color-pine-950: #08130E;
+  --color-forest-700: #1E4A33;
+  --color-forest-800: #173F2A;
+  --color-forest-900: #10251B;
+  --color-leaf-500: #07894F;   /* logo mid stop */
+  --color-leaf-600: #06703F;
+  --color-lime-300: #D2F09F;
+  --color-lime-400: #B9E66F;   /* logo light stop, lifted for contrast on forest */
+  --color-lime-500: #72D13C;
+  --color-alert: #C42E4A;
+
+  /* Roles (light). Dark values are swapped in the base layer below. */
+  --color-canvas: var(--fn-canvas);
+  --color-raised: var(--fn-raised);
+  --color-sunken: var(--fn-sunken);
+  --color-ink: var(--fn-ink);
+  --color-muted: var(--fn-muted);
+  --color-line: var(--fn-line);
+  --color-link: var(--fn-link);
+  --color-forest: var(--color-forest-900);
+  --color-forest-raised: var(--color-forest-800);
+  --color-on-forest: var(--color-bone-100);
+  --color-on-forest-muted: rgb(238 241 234 / 0.7);
+  --color-accent: var(--color-lime-400);
+  --color-on-accent: var(--color-pine-950);
+  --color-solid: var(--fn-solid);        /* primary button on light grounds */
+  --color-on-solid: var(--fn-on-solid);
+
+  --font-display: "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-hero: clamp(3rem, 1.2rem + 5.6vw, 7.5rem);
+  --text-hero--line-height: 0.94;
+  --text-hero--letter-spacing: -0.05em;
+  --text-h2: clamp(2.375rem, 1.4rem + 3.1vw, 4.75rem);
+  --text-h2--line-height: 0.98;
+  --text-h2--letter-spacing: -0.045em;
+  --text-h3: clamp(1.25rem, 1.1rem + 0.5vw, 1.625rem);
+  --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -0.02em;
+  --text-lead: clamp(1.0625rem, 1rem + 0.3vw, 1.3125rem);
+  --text-lead--line-height: 1.5;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.45;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.02em;
+
+  --radius-card: 24px;
+  --radius-full: 999px;
+  --shadow-card: 0 1px 2px rgb(8 19 14 / 0.06), 0 12px 32px -16px rgb(8 19 14 / 0.22);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+@layer base {
+  :root {
+    --fn-canvas: var(--color-bone-100);
+    --fn-raised: var(--color-bone-50);
+    --fn-sunken: var(--color-bone-200);
+    --fn-ink: #10251B;
+    --fn-muted: rgb(16 37 27 / 0.66);
+    --fn-line: rgb(8 19 14 / 0.12);
+    --fn-link: var(--color-leaf-600);
+    --fn-solid: var(--color-forest-900);
+    --fn-on-solid: var(--color-bone-50);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fn-canvas: #0B1510;
+      --fn-raised: #121F18;
+      --fn-sunken: #182820;
+      --fn-ink: #E6ECE3;
+      --fn-muted: #A3B1A8;
+      --fn-line: rgb(230 236 227 / 0.12);
+      --fn-link: var(--color-lime-400);
+      --fn-solid: var(--color-lime-400);
+      --fn-on-solid: var(--color-pine-950);
+      color-scheme: dark;
+    }
+  }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; text-wrap: balance; }
+  p { text-wrap: pretty; }
+  :focus-visible { outline: 2px solid var(--color-lime-500); outline-offset: 3px; border-radius: 6px; }
+  ::selection { background: var(--color-lime-300); color: var(--color-pine-950); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@utility gutter { padding-inline: 1.25rem; @media (min-width: 768px) { padding-inline: 2.5rem; } @media (min-width: 1280px) { padding-inline: 3.5rem; } }
+@utility wrap { width: 100%; max-width: 1360px; margin-inline: auto; }
+@utility tabular { font-variant-numeric: tabular-nums; }
+@utility screen { min-height: 100svh; }
