@@ -28,3 +28,26 @@ npm run build
 
 - Headlines: General Sans by Indian Type Foundry, loaded from the Fontshare API (see `src/app/layout.tsx`). The ITF Free Font License doesn't allow the font files in a public repository, so don't commit them. If the repo goes private you can self-host them with `next/font/local` instead.
 - Body: Outfit. Data and labels: Geist Mono.
+
+## Web app (farmer side)
+
+Signed-in screens live in `src/app/(platform)`:
+
+| Route | Screen |
+|---|---|
+| `/dashboard/farmer` | KPIs, revenue chart, needs attention, open orders |
+| `/products` | Product table with filters, sort, create/edit panel, delete with undo |
+| `/orders` | Orders grouped by status, detail panel with progress |
+| `/surplus/manage` | Flagged surplus and claims |
+
+Keyboard: `⌘K` command menu, `C` new product, `G` then `D/P/O/S` to jump, `/` filter, `[` collapse sidebar, `⌘↵` save.
+
+Data comes from RTK Query (`src/lib/api/farmnomad.ts`). By default it uses sample data from `src/lib/api/mock`.
+To use the Spring Boot API set:
+
+```
+NEXT_PUBLIC_USE_MOCKS=false
+NEXT_PUBLIC_API_URL=http://localhost:9000/api
+```
+
+Endpoints marked `CONFIRM WITH BACKEND` in that file aren't in the documented API yet (farmer orders list, surplus create, revenue analytics).

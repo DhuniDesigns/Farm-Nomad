@@ -22,3 +22,4 @@ export const mono = localFont({
   variable: "--font-geist-mono",
   display: "swap",
 });
+

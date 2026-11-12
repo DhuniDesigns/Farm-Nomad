@@ -75,10 +75,44 @@
   --text-label--letter-spacing: 0.02em;
 
   --radius-card: 24px;
+
+  --text-ui: 0.875rem;
+  --text-ui--line-height: 1.3rem;
+  --text-ui-sm: 0.75rem;
+  --text-ui-sm--line-height: 1rem;
+  --font-ui: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --radius-full: 999px;
   --shadow-card: 0 1px 2px rgb(8 19 14 / 0.06), 0 12px 32px -16px rgb(8 19 14 / 0.22);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* App colours resolve against .fn-app (light or dark) where they are used, so they live in an inline theme. */
+@theme inline {
+  --color-app-bg: var(--a-bg);
+  --color-app-panel: var(--a-panel);
+  --color-app-side: var(--a-side);
+  --color-app-hover: var(--a-hover);
+  --color-app-active: var(--a-active);
+  --color-app-line: var(--a-line);
+  --color-app-line-strong: var(--a-line-strong);
+  --color-app-text: var(--a-text);
+  --color-app-muted: var(--a-muted);
+  --color-app-faint: var(--a-faint);
+  --color-app-primary: var(--a-primary);
+  --color-app-on-primary: var(--a-on-primary);
+  --color-app-accent: var(--a-accent);
+  --color-app-accent-soft: var(--a-accent-soft);
+  --color-app-lime: var(--a-lime);
+  --color-app-accent-text: var(--a-accent-text);
+  --color-app-chart: var(--a-chart);
+  --color-app-amber: var(--a-amber);
+  --color-app-amber-soft: var(--a-amber-soft);
+  --color-app-red: var(--a-red);
+  --color-app-red-soft: var(--a-red-soft);
+  --color-app-blue: var(--a-blue);
+  --color-app-blue-soft: var(--a-blue-soft);
+  --shadow-pop: var(--a-shadow-pop);
 }
 
 @layer base {
@@ -131,3 +165,100 @@
 @utility wrap { width: 100%; max-width: 1360px; margin-inline: auto; }
 @utility tabular { font-variant-numeric: tabular-nums; }
 @utility screen { min-height: 100svh; }
+
+/* ───────── App theme ─────────
+   Neutral white / black grounds. Brand forest, leaf and lime carry buttons, focus, status and highlights.
+   General Sans for page titles, Geist for interface text, Geist Mono for figures.
+   Light by default; follows the system unless the user picks a theme. */
+.fn-app {
+  /* Neutral ground: pure white / near-black. Brand lives in buttons, focus, status and highlights. */
+  --a-bg: #FFFFFF;
+  --a-panel: #FFFFFF;
+  --a-side: #FAFAFA;
+  --a-hover: rgb(0 0 0 / 0.04);
+  --a-active: rgb(0 0 0 / 0.06);
+  --a-line: rgb(0 0 0 / 0.08);
+  --a-line-strong: rgb(0 0 0 / 0.14);
+  --a-text: #0B0B0C;
+  --a-muted: rgb(11 11 12 / 0.6);
+  --a-faint: rgb(11 11 12 / 0.4);
+  --a-primary: #10251B;          /* brand forest */
+  --a-on-primary: #FFFFFF;
+  --a-accent: #07894F;           /* brand leaf, from the logo */
+  --a-accent-soft: rgb(7 137 79 / 0.1);
+  --a-lime: #B9E66F;             /* brand lime */
+  --a-amber: #A86A08;
+  --a-amber-soft: rgb(232 168 40 / 0.14);
+  --a-red: #C42E4A;
+  --a-red-soft: rgb(196 46 74 / 0.09);
+  --a-blue: #2563EB;
+  --a-blue-soft: rgb(37 99 235 / 0.08);
+  --a-accent-text: #07894F;
+  --a-chart: #07894F;
+  --a-shadow-pop: 0 0 0 1px var(--a-line), 0 12px 32px -8px rgb(0 0 0 / 0.16), 0 4px 8px -4px rgb(0 0 0 / 0.06);
+  font-family: var(--font-ui);
+  font-size: var(--text-ui);
+  line-height: var(--text-ui--line-height);
+  background: var(--a-bg);
+  color: var(--a-text);
+  font-feature-settings: "cv11", "ss01";
+}
+@media (prefers-color-scheme: dark) {
+  .fn-app:not([data-theme="light"]) {
+  --a-bg: #000000;
+  --a-panel: #0A0A0A;
+  --a-side: #050505;
+  --a-hover: rgb(255 255 255 / 0.05);
+  --a-active: rgb(255 255 255 / 0.08);
+  --a-line: rgb(255 255 255 / 0.08);
+  --a-line-strong: rgb(255 255 255 / 0.14);
+  --a-text: #EDEDED;
+  --a-muted: rgb(237 237 237 / 0.62);
+  --a-faint: rgb(237 237 237 / 0.4);
+  --a-primary: #B9E66F;
+  --a-on-primary: #000000;
+  --a-accent: #B9E66F;
+  --a-accent-soft: rgb(185 230 111 / 0.12);
+  --a-lime: #B9E66F;
+  --a-amber: #F0B54A;
+  --a-amber-soft: rgb(240 181 74 / 0.12);
+  --a-red: #FF7A8F;
+  --a-red-soft: rgb(255 122 143 / 0.1);
+  --a-blue: #7DB6EE;
+  --a-blue-soft: rgb(125 182 238 / 0.1);
+  --a-accent-text: #B9E66F;
+  --a-chart: #B9E66F;
+  --a-shadow-pop: 0 0 0 1px var(--a-line-strong), 0 16px 40px -8px rgb(0 0 0 / 0.7);
+  }
+}
+.fn-app[data-theme="dark"] {
+  --a-bg: #000000;
+  --a-panel: #0A0A0A;
+  --a-side: #050505;
+  --a-hover: rgb(255 255 255 / 0.05);
+  --a-active: rgb(255 255 255 / 0.08);
+  --a-line: rgb(255 255 255 / 0.08);
+  --a-line-strong: rgb(255 255 255 / 0.14);
+  --a-text: #EDEDED;
+  --a-muted: rgb(237 237 237 / 0.62);
+  --a-faint: rgb(237 237 237 / 0.4);
+  --a-primary: #B9E66F;
+  --a-on-primary: #000000;
+  --a-accent: #B9E66F;
+  --a-accent-soft: rgb(185 230 111 / 0.12);
+  --a-lime: #B9E66F;
+  --a-amber: #F0B54A;
+  --a-amber-soft: rgb(240 181 74 / 0.12);
+  --a-red: #FF7A8F;
+  --a-red-soft: rgb(255 122 143 / 0.1);
+  --a-blue: #7DB6EE;
+  --a-blue-soft: rgb(125 182 238 / 0.1);
+  --a-accent-text: #B9E66F;
+  --a-chart: #B9E66F;
+  --a-shadow-pop: 0 0 0 1px var(--a-line-strong), 0 16px 40px -8px rgb(0 0 0 / 0.7);
+}
+.fn-app ::selection { background: var(--a-lime); color: #10251B; }
+@layer base {
+  .fn-app :focus-visible { outline: 2px solid var(--a-accent-text); outline-offset: 2px; }
+}
+.fn-app .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
