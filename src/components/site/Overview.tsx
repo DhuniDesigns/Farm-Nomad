@@ -43,11 +43,11 @@ export function Overview() {
 
           {/* Stat card */}
           <article className="flex min-h-[460px] flex-col justify-between rounded-[var(--radius-card)] bg-mist p-6 text-[#10251B] lg:col-span-3 dark:bg-[#1A2B1F] dark:text-on-forest">
-            <Ring value={0.072} />
+            <Ring value={0.29} />
             <div>
-              <p className="font-display text-[2.75rem] font-medium leading-none tracking-[-0.05em] tabular">3.6m tonnes</p>
-              <h3 className="mt-3 text-body font-medium">wasted or left as surplus on UK farms each year</h3>
-              <p className="mt-1 text-small opacity-70">About 7 in every 100 tonnes harvested.</p>
+              <p className="font-display text-[2.75rem] font-medium leading-none tracking-[-0.05em] tabular">3 in 10</p>
+              <h3 className="mt-3 text-body font-medium">tonnes of UK food waste happen on farms and in food production</h3>
+              <p className="mt-1 text-small opacity-70">That&apos;s the surplus FarmNomad helps move.</p>
               <p className="mt-4 font-mono text-label opacity-60">Source: WRAP</p>
             </div>
           </article>
@@ -85,7 +85,7 @@ function Ring({ value }: { value: number }) {
   const filled = Math.round(value * 100);
   return (
     <div>
-      <div ref={ref} className="grid grid-cols-10 gap-1.5" role="img" aria-label={`${filled} in every 100 tonnes harvested`}>
+      <div ref={ref} className="grid grid-cols-10 gap-1.5" role="img" aria-label={`${filled} in every 100 tonnes of UK food waste`}>
         {Array.from({ length: 100 }, (_, i) => {
           const on = i >= 100 - filled;
           return (

@@ -34,7 +34,7 @@ export function Footer() {
             <div>
               <h2 id="join-title" className="max-w-[12ch] text-h2">Be first on FarmNomad.</h2>
               <p className="mt-6 max-w-[40ch] text-lead text-on-forest/80">
-                We&apos;re opening in Lancashire first. Tell us who you are and we&apos;ll email you when your side of FarmNomad is ready.
+                We&apos;re launching across the North West first, then rolling out UK-wide. Tell us who you are and we&apos;ll email you when your side of FarmNomad is ready.
               </p>
               <ul className="mt-10 grid gap-3 text-body">
                 <li>
@@ -65,7 +65,7 @@ export function Footer() {
               <div className="max-w-[22rem]">
                 <Logo tone="on-dark" />
                 <p className="mt-6 text-body text-on-forest/60">
-                  A marketplace and delivery network for growers, buyers and community food groups. Starting in Lancashire.
+                  A marketplace and delivery network for growers, buyers and community food groups. Launching across the North West, rolling out UK-wide.
                 </p>
               </div>
 

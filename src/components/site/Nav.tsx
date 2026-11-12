@@ -162,7 +162,7 @@ export function Nav() {
               ))}
             </ul>
             <motion.div className="mt-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
-              <p className="mb-4 text-small text-muted">Starting with farms across Lancashire.</p>
+              <p className="mb-4 text-small text-muted">Launching across the North West, rolling out UK-wide.</p>
               <Button href="#join" onClick={() => setOpen(false)} className="w-full">
                 Join the waitlist
               </Button>

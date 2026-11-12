@@ -29,7 +29,7 @@ export function Farmers() {
         <div className="flex flex-col justify-center p-6 py-14 md:p-14 lg:p-20">
           <h2 className="max-w-[13ch] text-h2">List once and sell to every buyer nearby.</h2>
           <p className="mt-6 max-w-[44ch] text-lead text-muted">
-            You set the price. FarmNomad handles payment and delivery, starting with farms across Lancashire.
+            You set the price. FarmNomad handles payment and delivery, starting with farms across the North West.
           </p>
           <ul className="mt-10 grid gap-4">
             {perks.map((p) => (

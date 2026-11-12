@@ -3,6 +3,8 @@ import { Hero } from "@/components/site/Hero";
 import { Overview } from "@/components/site/Overview";
 import { Network } from "@/components/site/Network";
 import { Shop } from "@/components/site/Shop";
+import { Impact } from "@/components/site/Impact";
+import { GroupBuy } from "@/components/site/GroupBuy";
 import { HowItWorks } from "@/components/site/HowItWorks";
 import { PromiseLines } from "@/components/site/Promise";
 import { Farmers } from "@/components/site/Farmers";
@@ -20,9 +22,11 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
+        <Impact />
         <Overview />
         <HowItWorks />
         <Shop />
+        <GroupBuy />
         <Network />
         <PromiseLines />
         <Farmers />

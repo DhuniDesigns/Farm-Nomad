@@ -7,7 +7,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui";
 
 const ease = [0.23, 1, 0.32, 1] as const;
-const lines = ["Farm food, straight", "from Lancashire."];
+const lines = ["Food straight from", "UK farms."];
 
 export function Hero() {
   const reduce = useReducedMotion();
@@ -45,7 +45,7 @@ export function Hero() {
         <div className="px-5 pb-6 pt-20 md:px-10 md:pb-10">
           <motion.p className="mb-6 inline-flex items-center gap-2 text-small font-medium text-on-forest/90" {...fade(0.3)}>
             <MapPin aria-hidden weight="fill" className="size-4 text-accent" />
-            Lancashire, UK
+            Launching across the North West, rolling out UK-wide
           </motion.p>
           <h1 className="text-hero">
             {lines.map((l, i) => (

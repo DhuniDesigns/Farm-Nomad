@@ -3,11 +3,11 @@ import { outfit, mono } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FarmNomad | Lancashire farm food, delivered",
+  title: "FarmNomad | Food straight from UK farms",
   description:
     "FarmNomad connects UK farmers with customers, kitchens and community food groups, with delivery built in. List once, sell more, waste less.",
   openGraph: {
-    title: "FarmNomad | Lancashire farm food, delivered",
+    title: "FarmNomad | Food straight from UK farms",
     description: "List once, sell more, waste less. A marketplace and delivery network for UK growers.",
     images: ["/images/hero.webp"],
     locale: "en_GB",
