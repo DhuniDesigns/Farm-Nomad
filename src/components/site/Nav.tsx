@@ -114,6 +114,9 @@ export function Nav() {
             </ul>
 
             <div className="flex items-center gap-2 justify-self-end">
+              <a href="/login" className="hidden min-h-11 items-center rounded-full px-4 text-small font-medium text-ink/75 transition-colors duration-200 hover:bg-sunken hover:text-ink sm:inline-flex">
+                Log in
+              </a>
               <Button href="#join" className="hidden min-h-11 pl-5 pr-[1.375rem] text-small sm:inline-flex">
                 Join the waitlist
               </Button>
@@ -163,9 +166,14 @@ export function Nav() {
             </ul>
             <motion.div className="mt-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
               <p className="mb-4 text-small text-muted">Launching across the North West, rolling out UK-wide.</p>
-              <Button href="#join" onClick={() => setOpen(false)} className="w-full">
-                Join the waitlist
-              </Button>
+              <div className="grid gap-2">
+                <Button href="#join" onClick={() => setOpen(false)} className="w-full">
+                  Join the waitlist
+                </Button>
+                <a href="/login" className="flex min-h-12 items-center justify-center rounded-full bg-sunken text-small font-medium">
+                  Log in
+                </a>
+              </div>
             </motion.div>
           </motion.div>
         )}

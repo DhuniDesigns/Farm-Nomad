@@ -100,7 +100,11 @@ const ease = [0.23, 1, 0.32, 1] as const;
 
 export function AuthScreen({ initial }: { initial: AuthMode }) {
   const [mode, setModeState] = useState<AuthMode>(initial);
-  const [role, setRole] = useState<SignupRole>("CUSTOMER");
+  // ?role=FARMER (from the website's "Join as" links) picks the role up front.
+  const [role, setRole] = useState<SignupRole>(() => {
+    const r = new URLSearchParams(window.location.search).get("role")?.toUpperCase();
+    return r && r in ROLES ? (r as SignupRole) : "CUSTOMER";
+  });
   const [step, setStep] = useState<"role" | "details" | "done">("role");
   const details = useState<Details>(EMPTY); // lives here so it survives moving between steps
 

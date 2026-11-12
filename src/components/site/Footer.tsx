@@ -11,7 +11,7 @@ const ease = [0.23, 1, 0.32, 1] as const;
 
 const cols = [
   { title: "Explore", links: [["Shop", "#shop"], ["How it works", "#how"], ["Food groups", "#surplus"], ["For farmers", "#farmers"]] },
-  { title: "Join as", links: [["Customer", "#join"], ["Farmer", "#join"], ["Community group", "#join"], ["Driver", "#join"]] },
+  { title: "Join as", links: [["Customer", "/register?role=CUSTOMER"], ["Farmer", "/register?role=FARMER"], ["Community group", "/register?role=ORGANISATION"], ["Driver", "/register?role=DRIVER"], ["Log in", "/login"]] },
 ] as const;
 
 export function Footer() {
