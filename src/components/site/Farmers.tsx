@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Check } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui";
+import { ImageReveal } from "@/components/ImageReveal";
 import { setJoinRole } from "@/components/site/Join";
 
 const perks = [
@@ -16,7 +17,7 @@ export function Farmers() {
   return (
     <section id="farmers" className="scroll-mt-24 p-3 md:p-5">
       <div className="mx-auto grid max-w-[1400px] overflow-hidden rounded-[var(--radius-card)] bg-raised lg:grid-cols-2">
-        <div className="relative min-h-[360px] lg:min-h-[760px]">
+        <ImageReveal radius={0} className="min-h-[360px] lg:min-h-[760px]">
           <Image
             src="/images/greenhouse.webp"
             alt="Rows of leafy greens in a glasshouse at dusk under warm lights"
@@ -24,7 +25,7 @@ export function Farmers() {
             sizes="(min-width: 1024px) 50vw, 100vw"
             className="object-cover"
           />
-        </div>
+        </ImageReveal>
         <div className="flex flex-col justify-center p-6 py-14 md:p-14 lg:p-20">
           <h2 className="max-w-[13ch] text-h2">List once and sell to every buyer nearby.</h2>
           <p className="mt-6 max-w-[44ch] text-lead text-muted">

@@ -25,7 +25,7 @@ export function Footer() {
       {/* Contact band: full-bleed field photo, copy left, form card right */}
       <section ref={band} aria-labelledby="join-title" className="relative isolate mt-24 overflow-hidden bg-forest text-on-forest md:mt-36">
         <motion.div className="absolute inset-x-0 -inset-y-[10%] -z-10" style={{ y }}>
-          <Image src="/images/story-wheat.webp" alt="" fill sizes="100vw" className="object-cover" />
+          <Image src="/images/gate-dusk.webp" alt="" fill sizes="100vw" className="object-cover object-[30%_60%]" />
         </motion.div>
         <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(10_20_14/0.82)_0%,rgb(10_20_14/0.55)_45%,rgb(10_20_14/0.2)_100%)]" />
 

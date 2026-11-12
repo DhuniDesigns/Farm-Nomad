@@ -22,17 +22,17 @@ export function Overview() {
         <div className="mt-14 grid gap-4 md:mt-20 lg:grid-cols-12">
           {/* Photo card */}
           <article className="flex flex-col rounded-[var(--radius-card)] bg-raised p-2 lg:col-span-5">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[18px] lg:aspect-auto lg:flex-1">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-[18px] sm:aspect-[4/3] lg:aspect-auto lg:min-h-[420px] lg:flex-1">
               <Image
-                src="/images/step-list.webp"
-                alt="A farmer kneeling in a carrot field, photographing a bunch of carrots with his phone"
+                src="/images/harvest-hands.webp"
+                alt="A farmer's muddy hands holding freshly pulled rainbow chard and carrots in a vegetable field"
                 fill
                 sizes="(min-width: 1024px) 40vw, 95vw"
                 className="object-cover"
               />
               <span className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full bg-forest/55 px-3 py-1.5 text-label font-medium text-on-forest backdrop-blur-md">
                 <span className="size-1.5 rounded-full bg-accent" />
-                Listed from the field
+                Picked this morning
               </span>
             </div>
             <div className="px-4 pb-4 pt-6">

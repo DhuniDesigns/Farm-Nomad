@@ -21,9 +21,9 @@ export default function Home() {
       <main>
         <Hero />
         <Overview />
-        <Network />
-        <Shop />
         <HowItWorks />
+        <Shop />
+        <Network />
         <PromiseLines />
         <Farmers />
       </main>
