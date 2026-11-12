@@ -202,16 +202,16 @@ function AttentionRow({ p, s, onEdit, onSurplus }: { p: Product; s: ReturnType<t
       <button onClick={onEdit} className="min-w-0 flex-1 truncate text-left font-medium hover:underline">
         {p.name}
       </button>
-      <Pill tone={tone}>{label}</Pill>
       {(s === "expiring" || s === "expired") && p.quantityAvailable > 0 ? (
-        <Button size="sm" variant="ghost" onClick={onSurplus} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100">
+        <Button size="sm" variant="ghost" onClick={onSurplus} className="text-app-text opacity-100 transition-[opacity,transform,background-color] md:translate-x-1 md:opacity-0 md:group-hover:translate-x-0 md:group-hover:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100">
           Flag surplus
         </Button>
       ) : (
-        <Button size="sm" variant="ghost" onClick={onEdit} className="opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100">
+        <Button size="sm" variant="ghost" onClick={onEdit} className="text-app-text opacity-100 transition-[opacity,transform,background-color] md:translate-x-1 md:opacity-0 md:group-hover:translate-x-0 md:group-hover:opacity-100 md:focus-visible:translate-x-0 md:focus-visible:opacity-100">
           Restock
         </Button>
       )}
+      <Pill tone={tone}>{label}</Pill>
     </li>
   );
 }
