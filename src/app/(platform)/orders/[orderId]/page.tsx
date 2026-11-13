@@ -43,7 +43,7 @@ export default function OrderDetailPage() {
     <div className="mx-auto max-w-[760px] px-4 pb-16 md:px-8">
       <div className="pt-5">
         <Link href="/orders" className="inline-flex items-center gap-1.5 text-app-muted transition-colors hover:text-app-text">
-          <ArrowLeft className="size-4" /> {me?.role === "CUSTOMER" ? "My orders" : "Orders"}
+          <ArrowLeft className="size-4" /> {me?.role === "CUSTOMER" ? "My orders" : me?.role === "KITCHEN" ? "Ingredient orders" : "Orders"}
         </Link>
       </div>
 
@@ -119,7 +119,7 @@ export default function OrderDetailPage() {
         </section>
       </div>
 
-      {p && p.quantityAvailable > 0 && me?.role === "CUSTOMER" && (o.status === "DELIVERED" || o.status === "CANCELLED") && (
+      {p && p.quantityAvailable > 0 && (me?.role === "CUSTOMER" || me?.role === "KITCHEN") && (o.status === "DELIVERED" || o.status === "CANCELLED") && (
         <Button className="mt-6" onClick={() => addToCart(p, o.quantity)}>
           <ArrowClockwise className="size-4" /> Buy again
         </Button>

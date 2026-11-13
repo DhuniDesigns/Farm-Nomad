@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { ArrowSquareOut, Desktop, MagnifyingGlass, Moon, SidebarSimple, Sun } from "@phosphor-icons/react/dist/ssr";
-import { useAssignedOrdersQuery, useGetCartQuery, useListDonationsQuery, useListFarmerOrdersQuery, useListMyProductsQuery, useMeQuery, useMyMessagesQuery, useMyOrdersQuery, useUnassignedOrdersQuery } from "@/lib/api/farmnomad";
+import { useAssignedOrdersQuery, useGetCartQuery, useKitchenMealOrdersQuery, useMyMealsQuery, useListDonationsQuery, useListFarmerOrdersQuery, useListMyProductsQuery, useMeQuery, useMyMessagesQuery, useMyOrdersQuery, useUnassignedOrdersQuery } from "@/lib/api/farmnomad";
 import { HOME, NAV, ROLE_META, SOON } from "@/lib/navigation";
 import { stockState, type MockRole } from "@/lib/types/api";
 import { cn } from "@/lib/cn";
@@ -34,7 +34,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       {/* Workspace */}
       <div className={cn("flex h-12 items-center gap-1 px-2.5 pt-1", collapsed && "justify-center px-0")}>
         <div className={cn("flex min-w-0 items-center gap-2 rounded-[7px] p-1.5", collapsed ? "justify-center" : "flex-1")}>
-          {collapsed || role === "FARMER" || role === "ORGANISATION" ? (
+          {collapsed || role === "FARMER" || role === "ORGANISATION" || role === "KITCHEN" ? (
             <Image src="/logo-mark.svg" alt="" width={20} height={20} className="size-5 shrink-0" />
           ) : (
             <>
@@ -44,8 +44,8 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
           )}
           {!collapsed && (
             <>
-              {(role === "FARMER" || role === "ORGANISATION") && <span className="truncate font-semibold tracking-[-0.01em]">{ROLE_META[role].workspace}</span>}
-              {role !== "ORGANISATION" && <span className="ml-auto shrink-0 rounded-full bg-app-accent-soft px-1.5 text-[10px] font-semibold uppercase tracking-wide text-app-accent">{ROLE_META[role].label}</span>}
+              {(role === "FARMER" || role === "ORGANISATION" || role === "KITCHEN") && <span className="truncate font-semibold tracking-[-0.01em]">{ROLE_META[role].workspace}</span>}
+              {role !== "ORGANISATION" && role !== "KITCHEN" && <span className="ml-auto shrink-0 rounded-full bg-app-accent-soft px-1.5 text-[10px] font-semibold uppercase tracking-wide text-app-accent">{ROLE_META[role].label}</span>}
             </>
           )}
         </div>
@@ -82,7 +82,8 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       <nav className="px-2.5" aria-label="Main">
         <ul className="grid gap-px">
           {items.map(({ href, label, icon: Icon }) => {
-            const active = path === href || path.startsWith(href + "/") || (href === "/cart" && path.startsWith("/checkout"));
+            const longer = items.some((n) => n.href !== href && n.href.startsWith(href + "/") && (path === n.href || path.startsWith(n.href + "/")));
+            const active = !longer && (path === href || path.startsWith(href + "/") || (href === "/cart" && path.startsWith("/checkout")));
             const n = counts[href];
             const soon = SOON.has(href);
             return (
@@ -147,7 +148,8 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
 /** Badge counts per role: things that need the user's attention. */
 export function useCounts(role: MockRole): Record<string, number | undefined> {
   const farmer = role === "FARMER";
-  const customer = role === "CUSTOMER";
+  const customer = role === "CUSTOMER" || role === "KITCHEN";
+  const kitchen = role === "KITCHEN";
   const driver = role === "DRIVER";
   const org = role === "ORGANISATION";
   const { data: fOrders } = useListFarmerOrdersQuery(undefined, { skip: !farmer });
@@ -157,6 +159,8 @@ export function useCounts(role: MockRole): Record<string, number | undefined> {
   const { data: mine } = useAssignedOrdersQuery(undefined, { skip: !driver });
   const { data: open } = useUnassignedOrdersQuery(undefined, { skip: !driver });
   const { data: donations } = useListDonationsQuery(undefined, { skip: !org });
+  const { data: mealOrders } = useKitchenMealOrdersQuery(undefined, { skip: !kitchen });
+  const { data: menu } = useMyMealsQuery(undefined, { skip: !kitchen });
   const { data: me } = useMeQuery();
   const { data: msgs } = useMyMessagesQuery();
   const unread = msgs?.filter((m) => !m.read && m.recipientId === me?.id).length;
@@ -172,6 +176,13 @@ export function useCounts(role: MockRole): Record<string, number | undefined> {
       "/messages": unread,
     };
   if (org) return { "/donations": donations?.length, "/messages": unread };
+  if (kitchen)
+    return {
+      "/meals/orders": mealOrders?.filter((o) => o.status === "NEW").length,
+      "/meals": menu?.filter((m) => m.available && m.portionsAvailable <= 3).length,
+      "/cart": cart?.reduce((s, i) => s + i.quantity, 0),
+      "/messages": unread,
+    };
   return {
     "/cart": cart?.reduce((s, i) => s + i.quantity, 0),
     "/orders": cOrders?.filter((o) => ["PENDING", "ASSIGNED", "IN_TRANSIT"].includes(o.status)).length,
@@ -188,11 +199,12 @@ function RoleSwitch() {
     ["CUSTOMER", "Customer"],
     ["DRIVER", "Driver"],
     ["ORGANISATION", "Food group"],
+    ["KITCHEN", "Kitchen"],
   ];
   return (
     <div className="mb-1 grid gap-1.5 rounded-[9px] p-2 shadow-[0_0_0_1px_var(--a-line)]">
       <p className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-app-faint">Demo · view as</p>
-      <div role="radiogroup" aria-label="View as" className="grid grid-cols-2 gap-0.5 rounded-[7px] bg-app-hover p-0.5 [&>button]:h-6">
+      <div role="radiogroup" aria-label="View as" className="grid grid-cols-2 gap-0.5 rounded-[7px] bg-app-hover p-0.5 [&>button]:h-6 [&>button:last-child:nth-child(odd)]:col-span-2">
         {opts.map(([r, label]) => (
           <button
             key={r}

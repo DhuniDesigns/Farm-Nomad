@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
-import type { CartItem, CheckoutSession, Donation, Message, Notification, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CartItem, CheckoutSession, Donation, Meal, MealInput, MealOrder, MealOrderStatus, Message, Notification, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 
 /**
  * One switch between sample data and the Spring Boot API.
@@ -27,7 +27,7 @@ const mockBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryErro
 export const api = createApi({
   reducerPath: "api",
   baseQuery: USE_MOCKS ? mockBaseQuery : realBaseQuery,
-  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders", "Jobs", "Donation", "Org", "Messages"],
+  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders", "Jobs", "Donation", "Org", "Messages", "Meal", "MealOrder"],
   endpoints: (b) => ({
     me: b.query<User, void>({ query: () => "/users/me", providesTags: ["Me"] }),
 
@@ -164,6 +164,37 @@ export const api = createApi({
     markMessageRead: b.mutation<Message, number>({ query: (id) => ({ url: `/messages/${id}/read`, method: "PATCH" }), invalidatesTags: ["Messages"] }),
     people: b.query<{ id: number; name: string; role: string }[], void>({ query: () => "/__mock/people" }),
 
+    // ───────── NomadEat meals (spec §3.4, JSON with already-hosted imageUrls) ─────────
+    listMeals: b.query<Meal[], void>({ query: () => "/meals", providesTags: ["Meal"] }),
+    getMeal: b.query<Meal, number>({ query: (id) => `/meals/${id}`, providesTags: ["Meal"] }),
+    myMeals: b.query<Meal[], void>({ query: () => "/meals/my", providesTags: ["Meal"] }),
+    createMeal: b.mutation<Meal, MealInput>({ query: (body) => ({ url: "/meals", method: "POST", body }), invalidatesTags: ["Meal"] }),
+    updateMeal: b.mutation<Meal, { id: number } & Partial<MealInput>>({
+      query: ({ id, ...body }) => ({ url: `/meals/${id}`, method: "PUT", body }),
+      // Optimistic: availability toggles feel instant.
+      async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
+        const undo = dispatch(api.util.updateQueryData("myMeals", undefined, (d) => {
+          const m = d.find((x) => x.id === id);
+          if (m) Object.assign(m, patch);
+        }));
+        queryFulfilled.catch(undo.undo);
+      },
+      invalidatesTags: ["Meal"],
+    }),
+    deleteMeal: b.mutation<Meal, number>({ query: (id) => ({ url: `/meals/${id}`, method: "DELETE" }), invalidatesTags: ["Meal"] }),
+
+    // ───────── Meal orders. CONFIRM WITH BACKEND: not in the spec yet. ─────────
+    orderMeal: b.mutation<MealOrder, { mealId: number; quantity: number; note?: string }>({
+      query: (body) => ({ url: "/meal-orders", method: "POST", body }),
+      invalidatesTags: ["Meal", "MealOrder"],
+    }),
+    myMealOrders: b.query<MealOrder[], void>({ query: () => "/meal-orders/my", providesTags: ["MealOrder"] }),
+    kitchenMealOrders: b.query<MealOrder[], void>({ query: () => "/meal-orders/kitchen", providesTags: ["MealOrder"] }),
+    updateMealOrder: b.mutation<MealOrder, { id: number; status: MealOrderStatus }>({
+      query: ({ id, status }) => ({ url: `/meal-orders/${id}/status`, method: "PATCH", params: { status } }),
+      invalidatesTags: ["MealOrder", "Meal", "Notification"],
+    }),
+
     // CONFIRM WITH BACKEND: revenue analytics endpoint is not documented yet.
     farmerRevenue: b.query<{ date: string; value: number }[], void>({ query: () => "/analytics/farmer/revenue" }),
   }),
@@ -218,4 +249,14 @@ export const {
   useSendMessageMutation,
   useMarkMessageReadMutation,
   usePeopleQuery,
+  useListMealsQuery,
+  useGetMealQuery,
+  useMyMealsQuery,
+  useCreateMealMutation,
+  useUpdateMealMutation,
+  useDeleteMealMutation,
+  useOrderMealMutation,
+  useMyMealOrdersQuery,
+  useKitchenMealOrdersQuery,
+  useUpdateMealOrderMutation,
 } = api;

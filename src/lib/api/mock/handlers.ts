@@ -1,9 +1,9 @@
-import type { CartItem, Donation, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CartItem, Donation, Meal, MealInput, MealOrder, MealOrderStatus, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 import * as db from "./db";
 
 // Copies of the sample data. Saved to the browser after every change so a reload (or the
 // Stripe-style redirect at checkout) keeps your cart, orders and edits.
-const KEY = "fn_mock_v2";
+const KEY = "fn_mock_v3";
 const fresh = () => ({
   products: structuredClone(db.products) as Product[],
   orders: structuredClone(db.orders) as Order[],
@@ -25,6 +25,10 @@ const fresh = () => ({
   messages: structuredClone(db.messages) as Message[],
   driverNotifications: structuredClone(db.driverNotifications),
   orgNotifications: structuredClone(db.orgNotifications),
+  kitchenUser: structuredClone(db.kitchenUser) as User,
+  meals: structuredClone(db.meals) as Meal[],
+  mealOrders: structuredClone(db.mealOrders) as MealOrder[],
+  kitchenNotifications: structuredClone(db.kitchenNotifications),
 });
 type State = ReturnType<typeof fresh>;
 const load = (): State => {
@@ -47,14 +51,14 @@ const save = () => {
 const role = (): MockRole => {
   try {
     const r = JSON.parse(window.localStorage.getItem("fn_role") ?? '"FARMER"');
-    return ["CUSTOMER", "DRIVER", "ORGANISATION"].includes(r) ? r : "FARMER";
+    return ["CUSTOMER", "DRIVER", "ORGANISATION", "KITCHEN"].includes(r) ? r : "FARMER";
   } catch {
     return "FARMER";
   }
 };
-const meKey = { FARMER: "farmer", CUSTOMER: "customer", DRIVER: "driver", ORGANISATION: "orgUser" } as const;
+const meKey = { FARMER: "farmer", CUSTOMER: "customer", DRIVER: "driver", ORGANISATION: "orgUser", KITCHEN: "kitchenUser" } as const;
 const currentUser = () => state[meKey[role()]];
-const notesKey = { FARMER: "notifications", CUSTOMER: "customerNotifications", DRIVER: "driverNotifications", ORGANISATION: "orgNotifications" } as const;
+const notesKey = { FARMER: "notifications", CUSTOMER: "customerNotifications", DRIVER: "driverNotifications", ORGANISATION: "orgNotifications", KITCHEN: "kitchenNotifications" } as const;
 
 /** Every order a driver could see: farm orders, customer orders and donation deliveries. */
 const pool = () => [...state.orders, ...state.customerOrders, ...state.donationOrders];
@@ -168,7 +172,8 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
       const done = state.customerOrders.filter((o) => (o as Order & { sessionId?: string }).sessionId === id);
       return done.length ? { data: done } : notFound("Checkout session");
     }
-    const base = nextId(state.customerOrders);
+    const base = Math.max(...pool().map((o) => o.id)) + 1;
+    const buyer = currentUser();
     const created: Order[] = items.map((i, idx) => {
       const p = productById(i.productId)!;
       p.quantityAvailable = Math.max(0, p.quantityAvailable - i.quantity);
@@ -177,8 +182,8 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
         productId: p.id,
         productName: p.name,
         quantity: i.quantity,
-        customerId: state.customer.id,
-        customerName: state.customer.fullName,
+        customerId: buyer.id,
+        customerName: role() === "KITCHEN" ? "Fishergate Kitchen" : buyer.fullName,
         driverId: null,
         driverName: null,
         status: "PENDING",
@@ -194,7 +199,7 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
   }],
 
   // Customer orders (spec §3.7). GET /orders/{id} is not documented yet; see spec §10 Q2.
-  ["GET", /^\/orders\/my$/, () => ({ data: state.customerOrders })],
+  ["GET", /^\/orders\/my$/, () => ({ data: state.customerOrders.filter((o) => o.customerId === currentUser().id) })],
   ["GET", /^\/orders\/(\d+)$/, (m) => {
     const o = pool().find((x) => x.id === +m[1]);
     return o ? { data: forDriver(o) } : notFound("Order");
@@ -330,6 +335,69 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     x.read = true;
     return { data: x };
   }],
+  // ───────── NomadEat meals (spec §3.4) ─────────
+  ["GET", /^\/meals$/, () => ({ data: state.meals.filter((m) => m.available) })],
+  ["GET", /^\/meals\/my$/, () => ({ data: state.meals.filter((m) => m.kitchenId === state.kitchenUser.id) })],
+  ["GET", /^\/meals\/(\d+)$/, (m) => {
+    const x = state.meals.find((y) => y.id === +m[1]);
+    return x ? { data: x } : notFound("Meal");
+  }],
+  ["POST", /^\/meals$/, (_, r) => {
+    const b = r.body as MealInput;
+    const err = checkMeal(b);
+    if (err) return bad(err);
+    const x: Meal = { ...b, id: nextId(state.meals), kitchenId: state.kitchenUser.id, kitchenName: "Fishergate Kitchen", kitchenArea: "Preston", createdAt: new Date().toISOString() };
+    state.meals.unshift(x);
+    return { data: x };
+  }],
+  ["PUT", /^\/meals\/(\d+)$/, (m, r) => {
+    const i = state.meals.findIndex((y) => y.id === +m[1] && y.kitchenId === state.kitchenUser.id);
+    if (i < 0) return notFound("Meal");
+    const b = { ...state.meals[i], ...(r.body as Partial<MealInput>) };
+    const err = checkMeal(b);
+    if (err) return bad(err);
+    state.meals[i] = b;
+    return { data: b };
+  }],
+  ["DELETE", /^\/meals\/(\d+)$/, (m) => {
+    const i = state.meals.findIndex((y) => y.id === +m[1] && y.kitchenId === state.kitchenUser.id);
+    if (i < 0) return notFound("Meal");
+    const [gone] = state.meals.splice(i, 1);
+    return { data: gone };
+  }],
+
+  // ───────── Meal orders. CONFIRM WITH BACKEND: not in the spec; see MealOrder in types. ─────────
+  ["POST", /^\/meal-orders$/, (_, r) => {
+    const { mealId, quantity, note } = r.body as { mealId: number; quantity: number; note?: string };
+    const x = state.meals.find((y) => y.id === mealId);
+    if (!x || !x.available) return bad("This meal isn't available right now.");
+    if (!Number.isInteger(quantity) || quantity < 1) return bad("Order at least 1 portion.");
+    if (quantity > x.portionsAvailable) return bad(`Only ${x.portionsAvailable} portions left.`);
+    x.portionsAvailable -= quantity;
+    if (x.portionsAvailable === 0) x.available = false;
+    const me = currentUser();
+    const o: MealOrder = { id: nextId(state.mealOrders), mealId, mealName: x.name, quantity, total: +(x.price * quantity).toFixed(2), customerId: me.id, customerName: me.fullName, kitchenId: x.kitchenId ?? 0, kitchenName: x.kitchenName, status: "NEW", createdAt: new Date().toISOString(), note };
+    state.mealOrders.unshift(o);
+    if (x.kitchenId === state.kitchenUser.id) notify("kitchenNotifications", `New order: ${quantity} × ${x.name} from ${me.fullName}`);
+    return { data: o };
+  }],
+  ["GET", /^\/meal-orders\/my$/, () => ({ data: state.mealOrders.filter((o) => o.customerId === currentUser().id) })],
+  ["GET", /^\/meal-orders\/kitchen$/, () => ({ data: state.mealOrders.filter((o) => o.kitchenId === state.kitchenUser.id) })],
+  ["PATCH", /^\/meal-orders\/(\d+)\/status$/, (m, r) => {
+    const o = state.mealOrders.find((y) => y.id === +m[1]);
+    if (!o) return notFound("Meal order");
+    const to = String(r.params?.status ?? "") as MealOrderStatus;
+    const ok: Record<string, MealOrderStatus[]> = { NEW: ["PREPARING", "CANCELLED"], PREPARING: ["READY"], READY: ["COLLECTED"] };
+    if (!ok[o.status]?.includes(to)) return bad(`Can't move a meal order from ${o.status} to ${to}.`);
+    if (to === "CANCELLED") {
+      const x = state.meals.find((y) => y.id === o.mealId);
+      if (x) x.portionsAvailable += o.quantity;
+    }
+    Object.assign(o, { status: to, updatedAt: new Date().toISOString() });
+    if (to === "READY") notify("customerNotifications", `Your ${o.mealName} is ready at ${o.kitchenName}`);
+    return { data: o };
+  }],
+
   ["GET", /^\/__mock\/people$/, () => ({ data: Object.entries(db.people).map(([id, p]) => ({ id: +id, ...p })).filter((p) => p.id !== currentUser().id) })],
 
   ["GET", /^\/products\/my$/, () => ({ data: state.products })],
@@ -379,6 +447,14 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
 
   ["GET", /^\/analytics\/farmer\/revenue$/, () => ({ data: db.revenueSeries })],
 ];
+
+function checkMeal(b: Partial<MealInput>) {
+  if (!b.name?.trim()) return "Give the meal a name.";
+  if (!(Number(b.price) > 0)) return "Set a price above £0.";
+  if (!Number.isInteger(b.portionsAvailable) || (b.portionsAvailable ?? -1) < 0) return "Portions must be a whole number.";
+  if (!b.cuisine) return "Pick a cuisine.";
+  return null;
+}
 
 function pick(p?: Product) {
   return p ? { productName: p.name, farmerName: p.farmerName, coverImageUrl: p.coverImageUrl, bestBeforeDate: p.bestBeforeDate, pickupAddress: p.pickupAddress } : {};

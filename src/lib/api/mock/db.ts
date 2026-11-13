@@ -1,4 +1,4 @@
-import type { Donation, Message, Notification, Order, Organisation, Product, Surplus, User } from "@/lib/types/api";
+import type { Donation, Meal, MealOrder, Message, Notification, Order, Organisation, Product, Surplus, User } from "@/lib/types/api";
 
 // Sample data for the signed-in farmer. Names are illustrative.
 // Dates are generated relative to today so best-before warnings always look current.
@@ -259,6 +259,7 @@ export const people: Record<number, { name: string; role: string }> = {
   501: { name: "Amara Okafor", role: "Customer" },
   503: { name: "Lancaster Uni Catering", role: "Customer" },
   601: { name: "Ruth Ellis", role: "St Mary's Food Bank" },
+  801: { name: "Lena Brooks", role: "Fishergate Kitchen" },
   900: { name: "Sam Patel", role: "Driver" },
   901: { name: "Grace Moore", role: "Driver" },
 };
@@ -294,6 +295,10 @@ export const messages: Message[] = [
   msg(12, 900, 501, "I've got your strawberries, I'll be with you after my Fulwood drop.", 0, 8, 50),
   // Food bank ↔ farm
   msg(13, 12, 601, "We've put a box of roots up as a donation if St Mary's wants it.", 0, 7, 20, false),
+  // Kitchen ↔ farm / customer
+  msg(14, 801, 7, "Could you hold 20 kg of Maris Pipers for Thursday? Hotpot's been flying.", -1, 16, 10),
+  msg(15, 7, 801, "Can do. I'll put them aside, collect any time after 9.", -1, 16, 40),
+  msg(16, 501, 801, "Is the hotpot OK to reheat the next day?", 0, 11, 50, false),
 ];
 
 export const driverNotifications: Notification[] = [
@@ -311,4 +316,61 @@ export const orgNotifications: Notification[] = [
 /** Deliveries booked through "claim and request delivery" (spec §3.9 claim-and-order). */
 export const donationOrders: Order[] = [
   { id: 2201, productId: 207, productName: "Family veg box", quantity: 5, customerId: orgUser.id, customerName: organisation.name, driverId: 901, driverName: "Grace Moore", status: "IN_TRANSIT", paymentStatus: "PAID", createdAt: at(-1, 9, 30), donationId: 420 },
+];
+
+// ───────── Kitchen side (NomadEat) ─────────
+
+export const kitchenUser: User = {
+  id: 801,
+  fullName: "Lena Brooks",
+  email: "lena@fishergatekitchen.co.uk",
+  role: "KITCHEN",
+  phoneNumber: "01772 000456",
+  address: "9 Fishergate",
+  city: "Preston",
+  postcode: "PR1 2NJ",
+  country: "United Kingdom",
+};
+
+const KITCHENS: Record<number, { name: string; area: string }> = {
+  801: { name: "Fishergate Kitchen", area: "Preston" },
+  802: { name: "Ribble Valley Cooks", area: "Clitheroe" },
+  803: { name: "Campus Kitchen", area: "Lancaster" },
+};
+const meal = (id: number, kitchenId: number, m: Omit<Meal, "id" | "kitchenId" | "kitchenName" | "kitchenArea" | "imageUrls" | "available"> & { available?: boolean }, d = -3): Meal => ({
+  id,
+  kitchenId,
+  kitchenName: KITCHENS[kitchenId].name,
+  kitchenArea: KITCHENS[kitchenId].area,
+  imageUrls: [],
+  available: true,
+  createdAt: at(d, 10),
+  ...m,
+});
+
+export const meals: Meal[] = [
+  meal(701, 801, { name: "Lancashire hotpot", cuisine: "British", price: 7.5, portionsAvailable: 14, description: "Slow-cooked lamb and onion under sliced Maris Pipers, the classic way. Serves one generously.", dietary: [], farms: ["Hollins Farm"] }),
+  meal(702, 801, { name: "Roast root veg & lentil bowl", cuisine: "British", price: 6, portionsAvailable: 3, description: "Roast carrots, beetroot and squash over herby green lentils with a tahini dressing.", dietary: ["Vegan", "Gluten-free"], farms: ["Hollins Farm", "Fylde Growers"] }),
+  meal(703, 801, { name: "Jollof rice & chicken", cuisine: "West African", price: 8, portionsAvailable: 10, description: "Smoky party jollof with grilled chicken thigh and fried plantain.", dietary: ["Halal", "Dairy-free"], farms: [] }),
+  meal(704, 801, { name: "Kale & potato soup", cuisine: "British", price: 4.5, portionsAvailable: 0, description: "Hearty kale and potato soup with crusty bread from the bakery next door.", dietary: ["Vegetarian"], farms: ["Hollins Farm"], available: false }),
+  meal(711, 802, { name: "Chicken & leek pie", cuisine: "British", price: 7, portionsAvailable: 8, description: "Shortcrust pie with free-range chicken, leeks and a creamy thyme sauce.", dietary: [], farms: ["Moss Lane Farm"] }),
+  meal(712, 802, { name: "Strawberry Eton mess", cuisine: "Dessert", price: 3.5, portionsAvailable: 12, description: "Crushed meringue, cream and this week's Ribble Valley strawberries.", dietary: ["Vegetarian", "Gluten-free"], farms: ["Ribble Fruit"] }),
+  meal(721, 803, { name: "Chickpea & spinach curry", cuisine: "South Asian", price: 5, portionsAvailable: 20, description: "Mild coconut curry with basmati rice. Built for students and big batches.", dietary: ["Vegan", "Halal"], farms: [] }),
+  meal(722, 803, { name: "Veg box lasagne", cuisine: "Italian", price: 6.5, portionsAvailable: 9, description: "Layered with whatever's best in the Fylde veg box this week, plus a rich tomato ragù.", dietary: ["Vegetarian"], farms: ["Fylde Growers"] }),
+];
+
+export const mealOrders: MealOrder[] = [
+  { id: 5101, mealId: 701, mealName: "Lancashire hotpot", quantity: 2, total: 15, customerId: 501, customerName: "Amara Okafor", kitchenId: 801, kitchenName: "Fishergate Kitchen", status: "NEW", createdAt: at(0, 11, 42) },
+  { id: 5102, mealId: 703, mealName: "Jollof rice & chicken", quantity: 4, total: 32, customerId: 507, customerName: "Jack Riley", kitchenId: 801, kitchenName: "Fishergate Kitchen", status: "NEW", createdAt: at(0, 11, 5), note: "Extra plantain if you can" },
+  { id: 5103, mealId: 702, mealName: "Roast root veg & lentil bowl", quantity: 1, total: 6, customerId: 504, customerName: "Priya Shah", kitchenId: 801, kitchenName: "Fishergate Kitchen", status: "PREPARING", createdAt: at(0, 10, 20) },
+  { id: 5104, mealId: 701, mealName: "Lancashire hotpot", quantity: 3, total: 22.5, customerId: 509, customerName: "Hannah Lewis", kitchenId: 801, kitchenName: "Fishergate Kitchen", status: "READY", createdAt: at(0, 9, 30) },
+  { id: 5105, mealId: 703, mealName: "Jollof rice & chicken", quantity: 2, total: 16, customerId: 506, customerName: "Sophie Turner", kitchenId: 801, kitchenName: "Fishergate Kitchen", status: "COLLECTED", createdAt: at(-1, 18, 10) },
+  { id: 5106, mealId: 702, mealName: "Roast root veg & lentil bowl", quantity: 5, total: 30, customerId: 503, customerName: "Lancaster Uni Catering", kitchenId: 801, kitchenName: "Fishergate Kitchen", status: "COLLECTED", createdAt: at(-2, 12) },
+  { id: 5107, mealId: 712, mealName: "Strawberry Eton mess", quantity: 2, total: 7, customerId: 501, customerName: "Amara Okafor", kitchenId: 802, kitchenName: "Ribble Valley Cooks", status: "COLLECTED", createdAt: at(-3, 19) },
+];
+
+export const kitchenNotifications: Notification[] = [
+  { id: 81, recipientId: kitchenUser.id, type: "ORDER_UPDATE", message: "New order: 4 × Jollof rice & chicken from Jack Riley", read: false, createdAt: at(0, 11, 5) },
+  { id: 82, recipientId: kitchenUser.id, type: "SYSTEM", message: "Only 3 portions of Roast root veg & lentil bowl left", read: false, createdAt: at(0, 10, 30) },
+  { id: 83, recipientId: kitchenUser.id, type: "SURPLUS_ALERT", message: "Hollins Farm has surplus potatoes. Good for tomorrow's hotpot.", read: true, createdAt: at(-1, 8) },
 ];

@@ -18,7 +18,7 @@ const GROUPS: OrderStatus[] = ["PENDING", "ASSIGNED", "IN_TRANSIT", "DELIVERED",
 
 export default function OrdersPage() {
   const { role } = useApp();
-  return role === "CUSTOMER" ? <CustomerOrders /> : <FarmerOrders />;
+  return role === "CUSTOMER" || role === "KITCHEN" ? <CustomerOrders /> : <FarmerOrders />;
 }
 
 function FarmerOrders() {

@@ -120,8 +120,50 @@ export interface CheckoutSession {
   checkoutUrl: string;
 }
 
-/** Roles the demo can show. KITCHEN (NomadEat) arrives in R3; ADMIN is a separate console. */
-export type MockRole = Extract<Role, "FARMER" | "CUSTOMER" | "DRIVER" | "ORGANISATION">;
+/** Roles the demo can show. ADMIN is a separate console. */
+export type MockRole = Extract<Role, "FARMER" | "CUSTOMER" | "DRIVER" | "ORGANISATION" | "KITCHEN">;
+
+// ─── R3: NomadEat (spec §3.4 /meals) ───
+export interface Meal {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  portionsAvailable: number;
+  cuisine: string;
+  imageUrls: string[];
+  available: boolean;
+  kitchenId?: number;
+  createdAt?: string;
+  // UI enrichments. CONFIRM WITH BACKEND: not in the documented meal body yet.
+  kitchenName?: string;
+  kitchenArea?: string;
+  dietary?: string[];
+  farms?: string[]; // farms on FarmNomad the ingredients came from
+}
+export type MealInput = Pick<Meal, "name" | "description" | "price" | "portionsAvailable" | "cuisine" | "imageUrls" | "available"> & Partial<Pick<Meal, "dietary" | "farms">>;
+
+/**
+ * CONFIRM WITH BACKEND: the spec has no meal ordering endpoint. The demo assumes
+ * POST /meal-orders {mealId, quantity}, GET /meal-orders/my, GET /meal-orders/kitchen,
+ * PATCH /meal-orders/{id}/status?status=.
+ */
+export type MealOrderStatus = "NEW" | "PREPARING" | "READY" | "COLLECTED" | "CANCELLED";
+export interface MealOrder {
+  id: number;
+  mealId: number;
+  mealName: string;
+  quantity: number;
+  total: number;
+  customerId: number;
+  customerName: string;
+  kitchenId: number;
+  kitchenName?: string;
+  status: MealOrderStatus;
+  createdAt: string;
+  updatedAt?: string;
+  note?: string;
+}
 
 // ─── R2: donations, organisations, messages (spec §2, §3.9–3.12) ───
 export type VerificationLevel = "UNVERIFIED" | "PENDING" | "VERIFIED";

@@ -82,7 +82,7 @@ const ROLES: Record<SignupRole, { label: string; short: string; body: string; ic
     icon: CookingPot,
     img: "/images/greenhouse.webp",
     title: "Cook with produce from the farm down the road.",
-    points: ["Sell ready meals on NomadEat", "Buy ingredients direct from local farms", "NomadEat opens in a later release"],
+    points: ["Sell ready meals on NomadEat", "Buy ingredients direct from local farms", "Show diners which farms your food came from"],
     section: "Your kitchen",
   },
 };
@@ -458,21 +458,15 @@ function Register({
     return (
       <>
         <SentNote email={f.email} title="Check your email" body="Open the link to verify your account, then log in." />
-        {role !== "KITCHEN" ? (
-          <PrimaryButton
-            className="mt-8"
-            onClick={() => {
-              app.setRole(role);
-              router.push(HOME[role]);
-            }}
-          >
-            Continue to the demo
-          </PrimaryButton>
-        ) : (
-          <p className="mt-8 rounded-[14px] bg-app-hover p-4 text-center text-ui-sm text-app-muted shadow-[inset_0_0_0_1px_var(--a-line)]">
-            Kitchens join with NomadEat in a later release. We&apos;ll email you when it opens.
-          </p>
-        )}
+        <PrimaryButton
+          className="mt-8"
+          onClick={() => {
+            app.setRole(role);
+            router.push(HOME[role]);
+          }}
+        >
+          Continue to the demo
+        </PrimaryButton>
       </>
     );
 

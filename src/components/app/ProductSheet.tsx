@@ -269,7 +269,7 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
 const MAX_PHOTOS = 8;
 
 /** Up to 8 photos. The first is the cover buyers see in the marketplace; any photo can be made the cover. */
-function PhotosPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+export function PhotosPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const add = (files: FileList | null) => {
     if (!files) return;

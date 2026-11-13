@@ -1,5 +1,7 @@
 import {
+  BookOpenText,
   Buildings,
+  CookingPot,
   ChatsCircle,
   ForkKnife,
   Gift,
@@ -44,6 +46,15 @@ export const NAV: Record<MockRole, NavItem[]> = {
     { href: "/messages", label: "Messages", icon: ChatsCircle, key: "I", release: "R2", mobile: true },
     { href: "/profile", label: "Profile", icon: UserCircle, key: "U", release: "R1", mobile: true },
   ],
+  KITCHEN: [
+    { href: "/dashboard/kitchen", label: "Dashboard", icon: House, key: "D", release: "R3" },
+    { href: "/meals/orders", label: "Meal orders", icon: CookingPot, key: "O", release: "R3" },
+    { href: "/meals", label: "Menu", icon: BookOpenText, key: "N", release: "R3" },
+    { href: "/marketplace", label: "Buy ingredients", icon: Storefront, key: "M", release: "R1" },
+    { href: "/orders", label: "Ingredient orders", icon: Receipt, release: "R1" },
+    { href: "/messages", label: "Messages", icon: ChatsCircle, key: "I", release: "R2" },
+    { href: "/profile", label: "Profile", icon: UserCircle, key: "U", release: "R1" },
+  ],
   ORGANISATION: [
     { href: "/dashboard/organisation", label: "Dashboard", icon: House, key: "D", release: "R2" },
     { href: "/donations", label: "Donations", icon: Gift, key: "G", release: "R2" },
@@ -55,13 +66,14 @@ export const NAV: Record<MockRole, NavItem[]> = {
 };
 
 /** Items still to come: shown as "Soon" (their page explains what's coming). */
-export const SOON = new Set(["/nomadeat"]);
+export const SOON = new Set<string>();
 
 export const HOME: Record<MockRole, string> = {
   FARMER: "/dashboard/farmer",
   CUSTOMER: "/marketplace",
   DRIVER: "/dashboard/driver",
   ORGANISATION: "/dashboard/organisation",
+  KITCHEN: "/dashboard/kitchen",
 };
 
 export const ROLE_META: Record<MockRole, { label: string; workspace: string; demoEmail: string }> = {
@@ -69,6 +81,7 @@ export const ROLE_META: Record<MockRole, { label: string; workspace: string; dem
   CUSTOMER: { label: "Customer", workspace: "FarmNomad", demoEmail: "amara.okafor@example.com" },
   DRIVER: { label: "Driver", workspace: "Driving", demoEmail: "sam.patel@example.com" },
   ORGANISATION: { label: "Food group", workspace: "St Mary's Food Bank", demoEmail: "ruth@stmarysfoodbank.org.uk" },
+  KITCHEN: { label: "Kitchen", workspace: "Fishergate Kitchen", demoEmail: "lena@fishergatekitchen.co.uk" },
 };
 
 /**
@@ -79,6 +92,7 @@ const ALLOWED: Record<MockRole, string[]> = {
   FARMER: ["/dashboard$", "/dashboard/farmer", "/products", "/orders", "/surplus/manage", "/donations/manage", "/marketplace", "/messages", "/profile"],
   CUSTOMER: ["/dashboard$", "/marketplace", "/orders", "/cart", "/checkout", "/nomadeat", "/messages", "/profile"],
   DRIVER: ["/dashboard$", "/dashboard/driver", "/jobs", "/messages", "/profile"],
+  KITCHEN: ["/dashboard$", "/dashboard/kitchen", "/meals", "/marketplace", "/cart", "/checkout", "/orders", "/nomadeat", "/messages", "/profile"],
   ORGANISATION: ["/dashboard$", "/dashboard/organisation", "/donations$", "/surplus$", "/organisations", "/marketplace", "/messages", "/profile"],
 };
 

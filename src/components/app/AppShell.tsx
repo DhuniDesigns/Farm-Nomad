@@ -110,7 +110,7 @@ function TopBar() {
         <span className="truncate font-medium text-app-text">{page?.label ?? "FarmNomad"}</span>
       </nav>
       <div className="ml-auto flex items-center gap-1">
-        {role === "CUSTOMER" && <CartButton />}
+        {(role === "CUSTOMER" || role === "KITCHEN") && <CartButton />}
         <Notifications />
       </div>
     </header>

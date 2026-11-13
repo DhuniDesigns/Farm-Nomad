@@ -136,7 +136,7 @@ export default function ProductPage() {
             </div>
           ) : (
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <QtyStepper value={qty} max={p.quantityAvailable} label={p.name} onChange={(n) => setLocalQty(Math.max(1, n))} />
+              <QtyStepper value={qty} max={p.quantityAvailable} label={p.name} removable={false} onChange={(n) => setLocalQty(Math.max(1, n))} />
               <Button variant="primary" className="h-10 flex-1" disabled={adding} onClick={() => addToCart(p, qty)}>
                 Add to cart · <span className="num">{gbp(p.price * qty)}</span>
               </Button>
