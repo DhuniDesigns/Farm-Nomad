@@ -95,11 +95,31 @@ const nextId = (list: { id: number }[]) => Math.max(0, ...list.map((x) => x.id))
 
 const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
   ["GET", /^\/users\/me$/, () => ({ data: currentUser() })],
-  ["PUT", /^\/users\/(\d+)$/, (_, r) => {
-    const k = meKey[role()];
-    const u = state[k];
-    state[k] = { ...u, ...(r.body as Partial<User>), id: u.id, role: u.role, email: u.email };
-    return { data: state[k] };
+  ["PUT", /^\/users\/(\d+)$/, (m, r) => {
+    // Spec §3.2: ADMIN or owner. Body: fullName, phoneNumber, address, city, postcode, country, profilePictureUrl.
+    // Email and role aren't in the documented body, so they can't be changed here.
+    const id = +m[1];
+    const b = r.body as Partial<User>;
+    if (b.fullName !== undefined && !b.fullName.trim()) return bad("A name can't be empty.");
+    if (b.postcode && !/^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i.test(b.postcode.trim())) return bad("That postcode doesn't look right.");
+    if (b.phoneNumber && b.phoneNumber.replace(/\D/g, "").length < 10) return bad("That phone number looks too short.");
+    const clean = { fullName: b.fullName, phoneNumber: b.phoneNumber, address: b.address, city: b.city, postcode: b.postcode?.toUpperCase(), country: b.country, profilePictureUrl: b.profilePictureUrl };
+    const patch = Object.fromEntries(Object.entries(clean).filter(([, v]) => v !== undefined)) as Partial<User>;
+    const own = (Object.values(meKey) as (typeof meKey)[MockRole][]).find((k) => state[k].id === id);
+    if (own) {
+      if (role() !== "ADMIN" && meKey[role()] !== own) return { error: { status: 403, data: { message: "You can only change your own details." } } };
+      state[own] = { ...state[own], ...patch };
+      return { data: state[own] };
+    }
+    if (role() !== "ADMIN") return { error: { status: 403, data: { message: "You can only change your own details." } } };
+    const i = state.directory.findIndex((x) => x.id === id);
+    if (i < 0) return notFound("User");
+    state.directory[i] = { ...state.directory[i], ...patch };
+    return { data: state.directory[i] };
+  }],
+  ["POST", /^\/auth\/resend-verification$/, (_, r) => {
+    const { email } = (r.body ?? {}) as { email?: string };
+    return email ? { data: { ok: true } } : bad("No email address on this account.");
   }],
   ["POST", /^\/auth\/change-password$/, (_, r) => {
     const { currentPassword, newPassword } = (r.body ?? {}) as { currentPassword?: string; newPassword?: string };
@@ -305,11 +325,22 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     state.organisation = { id: 61, name: b.name.trim(), type: b.type, charityNumber: b.charityNumber, description: b.description, verificationLevel: "PENDING", userId: state.orgUser.id, createdAt: new Date().toISOString() };
     return { data: state.organisation };
   }],
-  ["PUT", /^\/organisations\/(\d+)$/, (_, r) => {
-    if (!state.organisation) return notFound("Organisation");
+  ["PUT", /^\/organisations\/(\d+)$/, (m, r) => {
+    // ORGANISATION (their own) or ADMIN (any). Body: name, type, charityNumber.
+    const id = +m[1];
     const b = r.body as Partial<Organisation>;
-    state.organisation = { ...state.organisation, ...b, id: state.organisation.id, verificationLevel: state.organisation.verificationLevel };
-    return { data: state.organisation };
+    if (b.name !== undefined && !b.name.trim()) return bad("An organisation needs a name.");
+    const keep = { name: b.name?.trim(), type: b.type, charityNumber: b.charityNumber, description: b.description };
+    const patch = Object.fromEntries(Object.entries(keep).filter(([, v]) => v !== undefined)) as Partial<Organisation>;
+    if (state.organisation?.id === id) {
+      state.organisation = { ...state.organisation, ...patch };
+      return { data: state.organisation };
+    }
+    if (role() !== "ADMIN") return notFound("Organisation");
+    const o = state.otherOrganisations.find((x) => x.id === id);
+    if (!o) return notFound("Organisation");
+    Object.assign(o, patch);
+    return { data: o };
   }],
   // Demo only: reset the organisation so the apply flow can be tried.
   ["DELETE", /^\/__mock\/organisation$/, () => {
@@ -358,7 +389,8 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: x };
   }],
   ["PUT", /^\/meals\/(\d+)$/, (m, r) => {
-    const i = state.meals.findIndex((y) => y.id === +m[1] && y.kitchenId === state.kitchenUser.id);
+    // KITCHEN (their own) or ADMIN (any), spec §3.4.
+    const i = state.meals.findIndex((y) => y.id === +m[1] && (role() === "ADMIN" || y.kitchenId === state.kitchenUser.id));
     if (i < 0) return notFound("Meal");
     const b = { ...state.meals[i], ...(r.body as Partial<MealInput>) };
     const err = checkMeal(b);
@@ -367,7 +399,7 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: b };
   }],
   ["DELETE", /^\/meals\/(\d+)$/, (m) => {
-    const i = state.meals.findIndex((y) => y.id === +m[1] && y.kitchenId === state.kitchenUser.id);
+    const i = state.meals.findIndex((y) => y.id === +m[1] && (role() === "ADMIN" || y.kitchenId === state.kitchenUser.id));
     if (i < 0) return notFound("Meal");
     const [gone] = state.meals.splice(i, 1);
     return { data: gone };
@@ -481,11 +513,28 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: p };
   }],
   ["PUT", /^\/products\/(\d+)$/, (m, r) => {
-    const i = state.products.findIndex((p) => p.id === +m[1]);
-    if (i < 0) return notFound("Product");
-    state.products[i] = { ...state.products[i], ...(r.body as ProductInput), updatedAt: new Date().toISOString() };
-    return { data: state.products[i] };
+    // FARMER (their own) or ADMIN (any), spec §3.3.
+    const id = +m[1];
+    const b = r.body as Partial<ProductInput>;
+    if (b.name !== undefined && !b.name.trim()) return bad("A product needs a name.");
+    if (b.price !== undefined && !(Number(b.price) > 0)) return bad("Set a price above £0.");
+    if (b.quantityAvailable !== undefined && (!Number.isInteger(b.quantityAvailable) || b.quantityAvailable < 0)) return bad("Stock must be a whole number.");
+    const now = new Date().toISOString();
+    let out: Product | undefined;
+    const i = state.products.findIndex((p) => p.id === id);
+    if (i >= 0) out = state.products[i] = { ...state.products[i], ...(b as ProductInput), updatedAt: now };
+    if (role() === "ADMIN") {
+      const j = state.marketplace.findIndex((p) => p.id === id);
+      if (j >= 0) out = state.marketplace[j] = { ...state.marketplace[j], ...(b as ProductInput), updatedAt: now };
+    } else if (i >= 0) {
+      // Keep the marketplace copy of a farmer's own product in step.
+      const j = state.marketplace.findIndex((p) => p.id === id);
+      if (j >= 0) state.marketplace[j] = { ...state.marketplace[j], ...(b as ProductInput), updatedAt: now };
+    }
+    return out ? { data: out } : notFound("Product");
   }],
+  // Admin: every meal, including ones switched off (spec §3.4 GET /meals shows only live ones).
+  ["GET", /^\/__admin\/meals$/, () => ({ data: state.meals })],
   ["DELETE", /^\/products\/(\d+)$/, (m) => {
     // FARMER deletes their own; ADMIN can remove any listing (spec §3.3).
     const id = +m[1];

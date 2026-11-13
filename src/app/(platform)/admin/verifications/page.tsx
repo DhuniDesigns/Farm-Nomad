@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowSquareOut, ChatsCircle, Check, SealCheck, X } from "@phosphor-icons/react/dist/ssr";
+import { ArrowSquareOut, ChatsCircle, Check, PencilSimple, SealCheck, X } from "@phosphor-icons/react/dist/ssr";
 import { useListOrganisationsQuery, useListUsersQuery, useVerifyOrganisationMutation } from "@/lib/api/farmnomad";
 import type { Organisation, VerificationLevel } from "@/lib/types/api";
 import { PageHeader } from "@/components/app/PageHeader";
+import { OrganisationSheet } from "@/components/app/admin/EditSheets";
 import { Confirm, Filters } from "@/components/app/admin/parts";
 import { orgTypeLabel, verificationMeta } from "@/components/app/give/meta";
 import { Button, EmptyState, Pill, Skeleton, relDay } from "@/components/app/ui";
@@ -23,6 +24,7 @@ export default function Verifications() {
   const [verify, { isLoading: busy }] = useVerifyOrganisationMutation();
   const [f, setF] = useState<F>("PENDING");
   const [rejecting, setRejecting] = useState<Organisation | null>(null);
+  const [editing, setEditing] = useState<Organisation | null>(null);
   const rows = (data ?? []).filter((o) => (o.verificationLevel ?? "UNVERIFIED") === f);
 
   async function decide(o: Organisation, level: VerificationLevel) {
@@ -109,8 +111,11 @@ export default function Verifications() {
                         Remove verification
                       </Button>
                     )}
+                    <Button variant="ghost" className="ml-auto" onClick={() => setEditing(o)}>
+                      <PencilSimple className="size-4" /> Edit details
+                    </Button>
                     {contact && (
-                      <Link href={`/messages?to=${contact.id}&name=${encodeURIComponent(contact.fullName)}`} className="ml-auto">
+                      <Link href={`/messages?to=${contact.id}&name=${encodeURIComponent(contact.fullName)}`}>
                         <Button variant="ghost">
                           <ChatsCircle className="size-4" /> Ask a question
                         </Button>
@@ -123,6 +128,7 @@ export default function Verifications() {
           </ul>
         )}
       </div>
+      <OrganisationSheet org={editing ? (data?.find((x) => x.id === editing.id) ?? editing) : null} onClose={() => setEditing(null)} />
       <Confirm
         open={!!rejecting}
         title={rejecting?.verificationLevel === "VERIFIED" ? `Remove ${rejecting?.name}'s verification?` : `Turn down ${rejecting?.name}?`}

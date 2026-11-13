@@ -39,8 +39,9 @@ export const api = createApi({
       invalidatesTags: ["Product"],
     }),
     updateProduct: b.mutation<Product, { id: number } & Partial<ProductInput>>({
+      // FARMER (own) or ADMIN (any).
       query: ({ id, ...body }) => ({ url: `/products/${id}`, method: "PUT", body }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["Product", "Market"],
     }),
     deleteProduct: b.mutation<Product, number>({ query: (id) => ({ url: `/products/${id}`, method: "DELETE" }), invalidatesTags: ["Product", "Market"] }),
     restoreProduct: b.mutation<Product, Product>({ query: (body) => ({ url: "/__mock/products/restore", method: "POST", body }), invalidatesTags: ["Product", "Market"] }),
@@ -149,7 +150,7 @@ export const api = createApi({
     }),
     updateOrganisation: b.mutation<Organisation, { id: number } & Partial<Organisation>>({
       query: ({ id, ...body }) => ({ url: `/organisations/${id}`, method: "PUT", body }),
-      invalidatesTags: ["Org"],
+      invalidatesTags: ["Org", "Orgs"],
     }),
     mockResetOrganisation: b.mutation<{ ok: boolean }, void>({ query: () => ({ url: "/__mock/organisation", method: "DELETE" }), invalidatesTags: ["Org"] }),
     mockVerifyOrganisation: b.mutation<Organisation, void>({ query: () => ({ url: "/__mock/organisation/verify", method: "POST" }), invalidatesTags: ["Org"] }),
@@ -197,6 +198,13 @@ export const api = createApi({
 
     // ───────── Admin console ─────────
     listUsers: b.query<User[], void>({ query: () => "/users", providesTags: ["Users"] }),
+    // Spec §3.2 PUT /users/{id}: ADMIN or owner.
+    updateUser: b.mutation<User, { id: number } & Partial<User>>({
+      query: ({ id, ...body }) => ({ url: `/users/${id}`, method: "PUT", body }),
+      invalidatesTags: ["Users", "Me", "AdminOrders"],
+    }),
+    resendVerification: b.mutation<{ ok: boolean }, { email: string }>({ query: (body) => ({ url: "/auth/resend-verification", method: "POST", body }) }),
+    allMealsAdmin: b.query<Meal[], void>({ query: () => "/__admin/meals", providesTags: ["Meal"] }),
     deleteUser: b.mutation<User, number>({ query: (id) => ({ url: `/users/${id}`, method: "DELETE" }), invalidatesTags: ["Users"] }),
     mockRestoreUser: b.mutation<User, User>({ query: (body) => ({ url: "/__mock/users", method: "POST", body }), invalidatesTags: ["Users"] }),
     listOrdersAdmin: b.query<(Order & { total: number })[], OrderStatus | void>({
@@ -289,6 +297,9 @@ export const {
   useKitchenMealOrdersQuery,
   useUpdateMealOrderMutation,
   useListUsersQuery,
+  useUpdateUserMutation,
+  useResendVerificationMutation,
+  useAllMealsAdminQuery,
   useDeleteUserMutation,
   useMockRestoreUserMutation,
   useListOrdersAdminQuery,

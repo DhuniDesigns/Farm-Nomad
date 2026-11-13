@@ -1,15 +1,14 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChatsCircle, Trash, UsersThree } from "@phosphor-icons/react/dist/ssr";
+import { Trash, UsersThree } from "@phosphor-icons/react/dist/ssr";
 import { useDeleteUserMutation, useListUsersQuery, useMockRestoreUserMutation } from "@/lib/api/farmnomad";
 import type { Role, User } from "@/lib/types/api";
 import { PageHeader } from "@/components/app/PageHeader";
-import { Sheet } from "@/components/app/Sheet";
+import { UserSheet } from "@/components/app/admin/UserSheet";
 import { Confirm, Filters, RoleBadge, Search, Table, roleLabel, td, tr } from "@/components/app/admin/parts";
-import { Avatar, Button, EmptyState, IconButton, relDay } from "@/components/app/ui";
+import { Avatar, EmptyState, IconButton, relDay } from "@/components/app/ui";
 
 type F = "all" | Role;
 const ORDER: Role[] = ["CUSTOMER", "FARMER", "DRIVER", "ORGANISATION", "KITCHEN", "ADMIN"];
@@ -23,6 +22,17 @@ export default function AdminUsers() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<User | null>(null);
   const [removing, setRemoving] = useState<User | null>(null);
+
+  // Links from orders and other admin pages: /admin/users?open=501 or ?q=Amara
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("q")) setQ(sp.get("q")!);
+    const id = Number(sp.get("open"));
+    if (id && data) {
+      const u = data.find((x) => x.id === id);
+      if (u) setOpen(u);
+    }
+  }, [data]);
 
   const rows = useMemo(
     () => (data ?? []).filter((u) => (f === "all" || u.role === f) && `${u.fullName} ${u.email} ${u.city ?? ""}`.toLowerCase().includes(q.toLowerCase())),
@@ -90,38 +100,7 @@ export default function AdminUsers() {
         </Table>
       </div>
 
-      <Sheet open={!!open} onClose={() => setOpen(null)} width={420} title={open?.fullName ?? ""} subtitle={open ? roleLabel[open.role] : undefined}>
-        {open && (
-          <div className="grid gap-5 px-5 py-5">
-            <div className="flex items-center gap-3">
-              <Avatar name={open.fullName} className="size-12 text-[15px]" />
-              <div className="min-w-0">
-                <p className="truncate font-medium">{open.fullName}</p>
-                <p className="truncate text-app-faint">{open.email}</p>
-              </div>
-            </div>
-            <dl className="grid gap-3 rounded-xl p-4 shadow-[0_0_0_1px_var(--a-line)]">
-              <Row k="Role" v={<RoleBadge role={open.role} />} />
-              <Row k="Phone" v={open.phoneNumber ?? "–"} />
-              <Row k="Address" v={[open.address, open.city, open.postcode].filter(Boolean).join(", ") || "–"} />
-              <Row k="Joined" v={open.createdAt ? new Date(open.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "–"} />
-              <Row k="User ID" v={<span className="num">{open.id}</span>} />
-            </dl>
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/messages?to=${open.id}&name=${encodeURIComponent(open.fullName)}`}>
-                <Button>
-                  <ChatsCircle className="size-4" /> Message
-                </Button>
-              </Link>
-              {open.role !== "ADMIN" && (
-                <Button variant="ghost" className="text-app-red" onClick={() => setRemoving(open)}>
-                  <Trash className="size-4" /> Remove account
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Sheet>
+      <UserSheet user={open ? (data?.find((u) => u.id === open.id) ?? open) : null} onClose={() => setOpen(null)} onRemove={setRemoving} />
 
       <Confirm
         open={!!removing}
@@ -133,15 +112,6 @@ export default function AdminUsers() {
         onConfirm={remove}
         onClose={() => setRemoving(null)}
       />
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <dt className="w-20 shrink-0 text-app-muted">{k}</dt>
-      <dd className="min-w-0 truncate">{v}</dd>
     </div>
   );
 }

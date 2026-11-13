@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Gift, Receipt } from "@phosphor-icons/react/dist/ssr";
@@ -23,8 +24,10 @@ const msg = (e: unknown) => (e as { data?: { message?: string } })?.data?.messag
 export default function AdminOrders() {
   const [f, setF] = useState<F>("all");
   useEffect(() => {
-    const s = new URLSearchParams(window.location.search).get("status") as OrderStatus | null;
+    const sp = new URLSearchParams(window.location.search);
+    const s = sp.get("status") as OrderStatus | null;
     if (s && FLOW.includes(s)) setF(s);
+    if (sp.get("q")) setQ(sp.get("q")!);
   }, []);
   const { data, isLoading } = useListOrdersAdminQuery();
   const { data: users } = useListUsersQuery();
@@ -92,7 +95,9 @@ export default function AdminOrders() {
                   </span>
                 </td>
                 <td className={td + " max-w-48"}>
-                  <span className="block truncate">{o.customerName}</span>
+                  <Link href={`/admin/users?open=${o.customerId}`} className="block truncate hover:underline" title="Open their details to fix an address or phone number">
+                    {o.customerName}
+                  </Link>
                   <span className="block truncate text-ui-sm text-app-faint">from {o.farmerName}</span>
                 </td>
                 <td className={td}>
