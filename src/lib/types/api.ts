@@ -17,6 +17,8 @@ export interface User {
   postcode?: string | null;
   country?: string | null;
   profilePictureUrl?: string | null;
+  /** CONFIRM WITH BACKEND: not in the documented user shape; the admin list uses it for "joined". */
+  createdAt?: string;
 }
 
 export interface Product {
@@ -120,8 +122,8 @@ export interface CheckoutSession {
   checkoutUrl: string;
 }
 
-/** Roles the demo can show. ADMIN is a separate console. */
-export type MockRole = Extract<Role, "FARMER" | "CUSTOMER" | "DRIVER" | "ORGANISATION" | "KITCHEN">;
+/** Roles the demo can show: every role, including the admin console. */
+export type MockRole = Role;
 
 // ─── R3: NomadEat (spec §3.4 /meals) ───
 export interface Meal {

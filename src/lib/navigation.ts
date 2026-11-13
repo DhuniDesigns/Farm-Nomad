@@ -1,4 +1,8 @@
 import {
+  ChartLineUp,
+  Leaf,
+  SealCheck,
+  UsersThree,
   BookOpenText,
   Buildings,
   CookingPot,
@@ -55,6 +59,16 @@ export const NAV: Record<MockRole, NavItem[]> = {
     { href: "/messages", label: "Messages", icon: ChatsCircle, key: "I", release: "R2" },
     { href: "/profile", label: "Profile", icon: UserCircle, key: "U", release: "R1" },
   ],
+  ADMIN: [
+    { href: "/dashboard/admin", label: "Overview", icon: ChartLineUp, key: "D", release: "R1" },
+    { href: "/admin/users", label: "Users", icon: UsersThree, key: "U", release: "R1" },
+    { href: "/admin/orders", label: "Orders", icon: Receipt, key: "O", release: "R1" },
+    { href: "/admin/listings", label: "Listings", icon: Package, key: "L", release: "R1" },
+    { href: "/admin/verifications", label: "Verifications", icon: SealCheck, key: "V", release: "R2" },
+    { href: "/admin/food-rescue", label: "Food rescue", icon: Leaf, key: "F", release: "R2" },
+    { href: "/messages", label: "Messages", icon: ChatsCircle, key: "I", release: "R2" },
+    { href: "/profile", label: "Profile", icon: UserCircle, release: "R1" },
+  ],
   ORGANISATION: [
     { href: "/dashboard/organisation", label: "Dashboard", icon: House, key: "D", release: "R2" },
     { href: "/donations", label: "Donations", icon: Gift, key: "G", release: "R2" },
@@ -74,6 +88,7 @@ export const HOME: Record<MockRole, string> = {
   DRIVER: "/dashboard/driver",
   ORGANISATION: "/dashboard/organisation",
   KITCHEN: "/dashboard/kitchen",
+  ADMIN: "/dashboard/admin",
 };
 
 export const ROLE_META: Record<MockRole, { label: string; workspace: string; demoEmail: string }> = {
@@ -82,6 +97,7 @@ export const ROLE_META: Record<MockRole, { label: string; workspace: string; dem
   DRIVER: { label: "Driver", workspace: "Driving", demoEmail: "sam.patel@example.com" },
   ORGANISATION: { label: "Food group", workspace: "St Mary's Food Bank", demoEmail: "ruth@stmarysfoodbank.org.uk" },
   KITCHEN: { label: "Kitchen", workspace: "Fishergate Kitchen", demoEmail: "lena@fishergatekitchen.co.uk" },
+  ADMIN: { label: "Admin", workspace: "FarmNomad admin", demoEmail: "admin@farmnomad.co.uk" },
 };
 
 /**
@@ -92,6 +108,7 @@ const ALLOWED: Record<MockRole, string[]> = {
   FARMER: ["/dashboard$", "/dashboard/farmer", "/products", "/orders", "/surplus/manage", "/donations/manage", "/marketplace", "/messages", "/profile"],
   CUSTOMER: ["/dashboard$", "/marketplace", "/orders", "/cart", "/checkout", "/nomadeat", "/messages", "/profile"],
   DRIVER: ["/dashboard$", "/dashboard/driver", "/jobs", "/messages", "/profile"],
+  ADMIN: ["/dashboard$", "/dashboard/admin", "/admin", "/marketplace", "/nomadeat", "/messages", "/profile"],
   KITCHEN: ["/dashboard$", "/dashboard/kitchen", "/meals", "/marketplace", "/cart", "/checkout", "/orders", "/nomadeat", "/messages", "/profile"],
   ORGANISATION: ["/dashboard$", "/dashboard/organisation", "/donations$", "/surplus$", "/organisations", "/marketplace", "/messages", "/profile"],
 };

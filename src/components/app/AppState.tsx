@@ -58,7 +58,7 @@ export function AppState({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [role, setRoleState] = useState<MockRole>(() => {
     const r = read<string>("fn_role", "FARMER");
-    return (["FARMER", "CUSTOMER", "DRIVER", "ORGANISATION", "KITCHEN"].includes(r) ? r : "FARMER") as MockRole;
+    return (["FARMER", "CUSTOMER", "DRIVER", "ORGANISATION", "KITCHEN", "ADMIN"].includes(r) ? r : "FARMER") as MockRole;
   });
   const [systemDark, setSystemDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);

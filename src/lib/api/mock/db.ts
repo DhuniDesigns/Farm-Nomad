@@ -17,6 +17,7 @@ const at = (offsetDays: number, h: number, m = 0) => {
 };
 
 export const me: User = {
+  createdAt: at(-180, 8),
   id: 7,
   fullName: "Tom Hollins",
   email: "tom@hollinsfarm.co.uk",
@@ -118,6 +119,7 @@ products.forEach((p, i) => (products[i] = withPhotos(p)));
 // ───────── Customer side ─────────
 
 export const customer: User = {
+  createdAt: at(-50, 19),
   id: 501,
   fullName: "Amara Okafor",
   email: "amara.okafor@example.com",
@@ -168,6 +170,7 @@ export const customerNotifications: Notification[] = [
 // ───────── Driver side ─────────
 
 export const driver: User = {
+  createdAt: at(-80, 10),
   id: 900,
   fullName: "Sam Patel",
   email: "sam.patel@example.com",
@@ -197,6 +200,7 @@ export const deliveryAddresses: Record<string, string> = {
 // ───────── Organisation side ─────────
 
 export const orgUser: User = {
+  createdAt: at(-120, 9),
   id: 601,
   fullName: "Ruth Ellis",
   email: "ruth@stmarysfoodbank.org.uk",
@@ -321,6 +325,7 @@ export const donationOrders: Order[] = [
 // ───────── Kitchen side (NomadEat) ─────────
 
 export const kitchenUser: User = {
+  createdAt: at(-60, 12),
   id: 801,
   fullName: "Lena Brooks",
   email: "lena@fishergatekitchen.co.uk",
@@ -373,4 +378,42 @@ export const kitchenNotifications: Notification[] = [
   { id: 81, recipientId: kitchenUser.id, type: "ORDER_UPDATE", message: "New order: 4 × Jollof rice & chicken from Jack Riley", read: false, createdAt: at(0, 11, 5) },
   { id: 82, recipientId: kitchenUser.id, type: "SYSTEM", message: "Only 3 portions of Roast root veg & lentil bowl left", read: false, createdAt: at(0, 10, 30) },
   { id: 83, recipientId: kitchenUser.id, type: "SURPLUS_ALERT", message: "Hollins Farm has surplus potatoes. Good for tomorrow's hotpot.", read: true, createdAt: at(-1, 8) },
+];
+
+// ───────── Admin ─────────
+
+export const adminUser: User = { id: 1, fullName: "Alex Morgan", email: "admin@farmnomad.co.uk", role: "ADMIN", city: "Preston", country: "United Kingdom", createdAt: at(-200, 9) };
+
+const u = (id: number, fullName: string, email: string, role: User["role"], city: string, joined: number): User => ({ id, fullName, email, role, city, country: "United Kingdom", createdAt: at(joined, 10 + (id % 8), (id * 7) % 60) });
+
+/** Everyone else on the platform, for the admin user list. Illustrative people only. */
+export const directory: User[] = [
+  u(11, "Ribble Fruit", "hello@ribblefruit.co.uk", "FARMER", "Longridge", -150),
+  u(12, "Moss Lane Farm", "info@mosslanefarm.co.uk", "FARMER", "Ormskirk", -140),
+  u(13, "Fylde Growers", "team@fyldegrowers.co.uk", "FARMER", "Kirkham", -96),
+  u(14, "Bowland Dairy", "dairy@bowland.co.uk", "FARMER", "Clitheroe", -12),
+  u(502, "The Pantry, Preston", "orders@thepantrypreston.co.uk", "CUSTOMER", "Preston", -88),
+  u(503, "Lancaster Uni Catering", "catering@lancs-uni.example", "CUSTOMER", "Lancaster", -75),
+  u(504, "Priya Shah", "priya.shah@example.com", "CUSTOMER", "Fulwood", -40),
+  u(505, "Ben Whitfield", "ben.w@example.com", "CUSTOMER", "Broughton", -33),
+  u(506, "Sophie Turner", "sophie.t@example.com", "CUSTOMER", "Kirkham", -21),
+  u(507, "Jack Riley", "jack.riley@example.com", "CUSTOMER", "Preston", -9),
+  u(509, "Hannah Lewis", "hannah.lewis@example.com", "CUSTOMER", "Lancaster", -3),
+  u(510, "Tariq Hussain", "tariq.h@example.com", "CUSTOMER", "Preston", 0),
+  u(901, "Grace Moore", "grace.moore@example.com", "DRIVER", "Preston", -60),
+  u(902, "Tomasz Nowak", "tomasz.n@example.com", "DRIVER", "Chorley", -5),
+  u(602, "Dev Patel", "dev@prestonpantry.org.uk", "ORGANISATION", "Preston", -110),
+  u(603, "Sian Hughes", "foodcoop@lancsu.example", "ORGANISATION", "Lancaster", -2),
+  u(604, "Mark Ellison", "office@ashtonprimary.example", "ORGANISATION", "Preston", -1),
+  u(605, "Yusuf Ali", "yusuf@avenhamfoodshare.org.uk", "ORGANISATION", "Preston", 0),
+  u(802, "Ribble Valley Cooks", "cooks@ribblevalley.example", "KITCHEN", "Clitheroe", -45),
+  u(803, "Campus Kitchen", "kitchen@campus.example", "KITCHEN", "Lancaster", -30),
+];
+
+/** Other organisations, for the verification queue. */
+export const otherOrganisations: Organisation[] = [
+  { id: 62, name: "Preston Community Pantry", type: "FOODBANK", charityNumber: "1187654", verificationLevel: "VERIFIED", userId: 602, createdAt: at(-110, 11), description: "Community pantry open three days a week." },
+  { id: 63, name: "Lancaster SU Food Co-op", type: "STUDENT_GROUP", verificationLevel: "PENDING", userId: 603, createdAt: at(-2, 15, 20), description: "Student-run co-op giving out free veg bags on campus every Friday." },
+  { id: 64, name: "Ashton Primary Breakfast Club", type: "SCHOOL", verificationLevel: "PENDING", userId: 604, createdAt: at(-1, 9, 40), description: "Free breakfast for around 60 pupils before school." },
+  { id: 65, name: "Avenham Faith Food Share", type: "RELIGIOUS", charityNumber: "1201133", verificationLevel: "PENDING", userId: 605, createdAt: at(0, 8, 5), description: "Weekly hot meals and food parcels run by local faith groups." },
 ];

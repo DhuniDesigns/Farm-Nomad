@@ -27,7 +27,7 @@ const mockBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryErro
 export const api = createApi({
   reducerPath: "api",
   baseQuery: USE_MOCKS ? mockBaseQuery : realBaseQuery,
-  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders", "Jobs", "Donation", "Org", "Messages", "Meal", "MealOrder"],
+  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders", "Jobs", "Donation", "Org", "Messages", "Meal", "MealOrder", "Users", "AdminOrders", "Orgs"],
   endpoints: (b) => ({
     me: b.query<User, void>({ query: () => "/users/me", providesTags: ["Me"] }),
 
@@ -42,8 +42,8 @@ export const api = createApi({
       query: ({ id, ...body }) => ({ url: `/products/${id}`, method: "PUT", body }),
       invalidatesTags: ["Product"],
     }),
-    deleteProduct: b.mutation<Product, number>({ query: (id) => ({ url: `/products/${id}`, method: "DELETE" }), invalidatesTags: ["Product"] }),
-    restoreProduct: b.mutation<Product, Product>({ query: (body) => ({ url: "/__mock/products/restore", method: "POST", body }), invalidatesTags: ["Product"] }),
+    deleteProduct: b.mutation<Product, number>({ query: (id) => ({ url: `/products/${id}`, method: "DELETE" }), invalidatesTags: ["Product", "Market"] }),
+    restoreProduct: b.mutation<Product, Product>({ query: (body) => ({ url: "/__mock/products/restore", method: "POST", body }), invalidatesTags: ["Product", "Market"] }),
 
     // Orders. CONFIRM WITH BACKEND: no farmer-scoped list is documented yet; this assumes GET /orders/my/farmer.
     listFarmerOrders: b.query<Order[], void>({ query: () => "/orders/my/farmer", providesTags: ["Order"] }),
@@ -186,13 +186,42 @@ export const api = createApi({
     // ───────── Meal orders. CONFIRM WITH BACKEND: not in the spec yet. ─────────
     orderMeal: b.mutation<MealOrder, { mealId: number; quantity: number; note?: string }>({
       query: (body) => ({ url: "/meal-orders", method: "POST", body }),
-      invalidatesTags: ["Meal", "MealOrder"],
+      invalidatesTags: ["Meal", "MealOrder", "Users", "AdminOrders", "Orgs"],
     }),
     myMealOrders: b.query<MealOrder[], void>({ query: () => "/meal-orders/my", providesTags: ["MealOrder"] }),
     kitchenMealOrders: b.query<MealOrder[], void>({ query: () => "/meal-orders/kitchen", providesTags: ["MealOrder"] }),
     updateMealOrder: b.mutation<MealOrder, { id: number; status: MealOrderStatus }>({
       query: ({ id, status }) => ({ url: `/meal-orders/${id}/status`, method: "PATCH", params: { status } }),
       invalidatesTags: ["MealOrder", "Meal", "Notification"],
+    }),
+
+    // ───────── Admin console ─────────
+    listUsers: b.query<User[], void>({ query: () => "/users", providesTags: ["Users"] }),
+    deleteUser: b.mutation<User, number>({ query: (id) => ({ url: `/users/${id}`, method: "DELETE" }), invalidatesTags: ["Users"] }),
+    mockRestoreUser: b.mutation<User, User>({ query: (body) => ({ url: "/__mock/users", method: "POST", body }), invalidatesTags: ["Users"] }),
+    listOrdersAdmin: b.query<(Order & { total: number })[], OrderStatus | void>({
+      query: (status) => ({ url: "/orders", params: status ? { status } : undefined }),
+      providesTags: ["AdminOrders"],
+    }),
+    // Real API: PATCH /orders/{id}/assign?driverId= and PATCH /orders/{id}/status (admin rules).
+    adminAssignOrder: b.mutation<Order, { id: number; driverId: number }>({
+      query: ({ id, driverId }) => ({ url: `/__admin/orders/${id}/assign`, method: "PATCH", params: { driverId } }),
+      invalidatesTags: ["AdminOrders", "Jobs", "Order", "MyOrders"],
+    }),
+    adminOrderStatus: b.mutation<Order, { id: number; status: OrderStatus }>({
+      query: ({ id, status }) => ({ url: `/__admin/orders/${id}/status`, method: "PATCH", params: { status } }),
+      invalidatesTags: ["AdminOrders", "Jobs", "Order", "MyOrders"],
+    }),
+    listOrganisations: b.query<Organisation[], void>({ query: () => "/organisations", providesTags: ["Orgs"] }),
+    // Real API: PUT /organisations/{id} { verificationLevel } (field name to confirm).
+    verifyOrganisation: b.mutation<Organisation, { id: number; verificationLevel: NonNullable<Organisation["verificationLevel"]> }>({
+      query: ({ id, verificationLevel }) => ({ url: `/__admin/organisations/${id}`, method: "PATCH", body: { verificationLevel } }),
+      invalidatesTags: ["Orgs", "Org", "Notification"],
+    }),
+    allDonationsAdmin: b.query<Donation[], void>({ query: () => "/donations/all", providesTags: ["Donation"] }),
+    assignSurplus: b.mutation<Surplus & { assignedTo: string }, { productId: number; organisationUserId: number }>({
+      query: ({ productId, organisationUserId }) => ({ url: `/surplus/assign/${productId}`, method: "POST", params: { organisationUserId } }),
+      invalidatesTags: ["Surplus"],
     }),
 
     // CONFIRM WITH BACKEND: revenue analytics endpoint is not documented yet.
@@ -259,4 +288,14 @@ export const {
   useMyMealOrdersQuery,
   useKitchenMealOrdersQuery,
   useUpdateMealOrderMutation,
+  useListUsersQuery,
+  useDeleteUserMutation,
+  useMockRestoreUserMutation,
+  useListOrdersAdminQuery,
+  useAdminAssignOrderMutation,
+  useAdminOrderStatusMutation,
+  useListOrganisationsQuery,
+  useVerifyOrganisationMutation,
+  useAllDonationsAdminQuery,
+  useAssignSurplusMutation,
 } = api;

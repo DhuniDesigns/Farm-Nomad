@@ -1,9 +1,9 @@
-import type { CartItem, Donation, Meal, MealInput, MealOrder, MealOrderStatus, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CartItem, Notification, Donation, Meal, MealInput, MealOrder, MealOrderStatus, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 import * as db from "./db";
 
 // Copies of the sample data. Saved to the browser after every change so a reload (or the
 // Stripe-style redirect at checkout) keeps your cart, orders and edits.
-const KEY = "fn_mock_v3";
+const KEY = "fn_mock_v4";
 const fresh = () => ({
   products: structuredClone(db.products) as Product[],
   orders: structuredClone(db.orders) as Order[],
@@ -29,6 +29,13 @@ const fresh = () => ({
   meals: structuredClone(db.meals) as Meal[],
   mealOrders: structuredClone(db.mealOrders) as MealOrder[],
   kitchenNotifications: structuredClone(db.kitchenNotifications),
+  adminUser: structuredClone(db.adminUser) as User,
+  directory: structuredClone(db.directory) as User[],
+  otherOrganisations: structuredClone(db.otherOrganisations) as Organisation[],
+  adminNotifications: [
+    { id: 91, recipientId: 1, type: "SYSTEM" as Notification["type"], message: "3 organisations are waiting for verification", read: false, createdAt: new Date().toISOString() },
+    { id: 92, recipientId: 1, type: "ORDER_UPDATE" as Notification["type"], message: "2 paid orders have no driver yet", read: false, createdAt: new Date().toISOString() },
+  ],
 });
 type State = ReturnType<typeof fresh>;
 const load = (): State => {
@@ -51,14 +58,14 @@ const save = () => {
 const role = (): MockRole => {
   try {
     const r = JSON.parse(window.localStorage.getItem("fn_role") ?? '"FARMER"');
-    return ["CUSTOMER", "DRIVER", "ORGANISATION", "KITCHEN"].includes(r) ? r : "FARMER";
+    return ["CUSTOMER", "DRIVER", "ORGANISATION", "KITCHEN", "ADMIN"].includes(r) ? r : "FARMER";
   } catch {
     return "FARMER";
   }
 };
-const meKey = { FARMER: "farmer", CUSTOMER: "customer", DRIVER: "driver", ORGANISATION: "orgUser", KITCHEN: "kitchenUser" } as const;
+const meKey = { FARMER: "farmer", CUSTOMER: "customer", DRIVER: "driver", ORGANISATION: "orgUser", KITCHEN: "kitchenUser", ADMIN: "adminUser" } as const;
 const currentUser = () => state[meKey[role()]];
-const notesKey = { FARMER: "notifications", CUSTOMER: "customerNotifications", DRIVER: "driverNotifications", ORGANISATION: "orgNotifications", KITCHEN: "kitchenNotifications" } as const;
+const notesKey = { FARMER: "notifications", CUSTOMER: "customerNotifications", DRIVER: "driverNotifications", ORGANISATION: "orgNotifications", KITCHEN: "kitchenNotifications", ADMIN: "adminNotifications" } as const;
 
 /** Every order a driver could see: farm orders, customer orders and donation deliveries. */
 const pool = () => [...state.orders, ...state.customerOrders, ...state.donationOrders];
@@ -398,6 +405,72 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: o };
   }],
 
+  // ───────── Admin (spec §3.2, §3.3, §3.7, §3.9–3.11). All ADMIN-only. ─────────
+  ["GET", /^\/users$/, () => ({ data: allUsers() })],
+  ["DELETE", /^\/users\/(\d+)$/, (m) => {
+    const id = +m[1];
+    if ([state.farmer, state.customer, state.driver, state.orgUser, state.kitchenUser, state.adminUser].some((x) => x.id === id))
+      return { error: { status: 409, data: { message: "Demo accounts can't be removed. Try someone else." } } };
+    const i = state.directory.findIndex((x) => x.id === id);
+    if (i < 0) return notFound("User");
+    const [gone] = state.directory.splice(i, 1);
+    return { data: gone };
+  }],
+  // Undo for the demo: put a removed user back.
+  ["POST", /^\/__mock\/users$/, (_, r) => {
+    state.directory.push(r.body as User);
+    return { data: r.body };
+  }],
+  ["GET", /^\/orders$/, (_, r) => {
+    const status = r.params?.status as OrderStatus | undefined;
+    const rows = pool().map(forDriver).map((o) => ({ ...o, total: (productById(o.productId)?.price ?? 0) * o.quantity }));
+    return { data: (status ? rows.filter((o) => o.status === status) : rows).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)) };
+  }],
+  ["PATCH", /^\/__admin\/orders\/(\d+)\/assign$/, (m, r) => {
+    // Same endpoint as the driver's (PATCH /orders/{id}/assign), but driverId is required for admin.
+    const o = pool().find((x) => x.id === +m[1]);
+    if (!o) return notFound("Order");
+    const d = drivers().find((x) => x.id === Number(r.params?.driverId));
+    if (!d) return bad("Pick a driver.");
+    if (o.status === "DELIVERED" || o.status === "CANCELLED") return bad("This order is already finished.");
+    Object.assign(o, { driverId: d.id, driverName: d.fullName, status: o.status === "PENDING" ? "ASSIGNED" : o.status, updatedAt: new Date().toISOString() });
+    if (d.id === state.driver.id) notify("driverNotifications", `You've been given a job: ${o.quantity} × ${o.productName}`);
+    return { data: o };
+  }],
+  ["PATCH", /^\/__admin\/orders\/(\d+)\/status$/, (m, r) => {
+    const o = pool().find((x) => x.id === +m[1]);
+    if (!o) return notFound("Order");
+    const to = String(r.params?.status ?? "") as OrderStatus;
+    const ok = NEXT[o.status] === to || (to === "CANCELLED" && o.status !== "DELIVERED" && o.status !== "CANCELLED");
+    if (!ok) return bad(`Can't move an order from ${o.status} to ${to}.`);
+    Object.assign(o, { status: to, updatedAt: new Date().toISOString(), ...(to === "CANCELLED" && o.paymentStatus === "PAID" ? { paymentStatus: "REFUNDED" } : {}) });
+    return { data: o };
+  }],
+  ["GET", /^\/organisations$/, () => ({ data: [...(state.organisation ? [state.organisation] : []), ...state.otherOrganisations] })],
+  ["PATCH", /^\/__admin\/organisations\/(\d+)$/, (m, r) => {
+    // Real API: PUT /organisations/{id} with verificationLevel (field name to confirm, spec §7.11).
+    const id = +m[1];
+    const o = state.organisation?.id === id ? state.organisation : state.otherOrganisations.find((x) => x.id === id);
+    if (!o) return notFound("Organisation");
+    o.verificationLevel = (r.body as { verificationLevel: Organisation["verificationLevel"] }).verificationLevel;
+    if (o === state.organisation) notify("orgNotifications", o.verificationLevel === "VERIFIED" ? "Your organisation is verified. You can claim food now." : "We couldn't verify your organisation. Check your details and apply again.", "DONATION_UPDATE");
+    return { data: o };
+  }],
+  ["GET", /^\/donations\/all$/, () => ({ data: state.donations })],
+  ["POST", /^\/surplus\/assign\/(\d+)$/, (m, r) => {
+    const s = [...state.surplus, ...state.otherSurplus].find((x) => x.productId === +m[1] && (x.availableQuantity ?? 0) > 0);
+    if (!s) return bad("This surplus has already gone.");
+    const orgUserId = Number(r.params?.organisationUserId);
+    const org = [...(state.organisation ? [state.organisation] : []), ...state.otherOrganisations].find((o) => o.userId === orgUserId);
+    if (!org || org.verificationLevel !== "VERIFIED") return bad("Pick a verified organisation.");
+    s.availableQuantity = 0;
+    if (org === state.organisation) {
+      s.claimedByMe = true;
+      notify("orgNotifications", `FarmNomad assigned ${s.productName} to you`, "SURPLUS_ALERT");
+    }
+    return { data: { ...s, assignedTo: org.name } };
+  }],
+
   ["GET", /^\/__mock\/people$/, () => ({ data: Object.entries(db.people).map(([id, p]) => ({ id: +id, ...p })).filter((p) => p.id !== currentUser().id) })],
 
   ["GET", /^\/products\/my$/, () => ({ data: state.products })],
@@ -414,15 +487,20 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: state.products[i] };
   }],
   ["DELETE", /^\/products\/(\d+)$/, (m) => {
-    const p = state.products.find((x) => x.id === +m[1]);
+    // FARMER deletes their own; ADMIN can remove any listing (spec §3.3).
+    const id = +m[1];
+    const p = state.products.find((x) => x.id === id) ?? (role() === "ADMIN" ? state.marketplace.find((x) => x.id === id) : undefined);
     if (!p) return notFound("Product");
-    state.products = state.products.filter((x) => x.id !== p.id);
+    state.products = state.products.filter((x) => x.id !== id);
+    if (role() === "ADMIN") state.marketplace = state.marketplace.filter((x) => x.id !== id);
     return { data: p };
   }],
   // Undo support for the mock only: put a deleted product back.
   ["POST", /^\/__mock\/products\/restore$/, (_, r) => {
-    state.products.unshift(r.body as Product);
-    return { data: r.body };
+    const p = r.body as Product;
+    if (p.farmerId === db.me.id) state.products.unshift(p);
+    if (role() === "ADMIN") state.marketplace.unshift(p);
+    return { data: p };
   }],
 
   ["GET", /^\/orders\/my\/farmer$/, () => ({ data: [...state.orders].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)) })],
@@ -447,6 +525,11 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
 
   ["GET", /^\/analytics\/farmer\/revenue$/, () => ({ data: db.revenueSeries })],
 ];
+
+const drivers = () => allUsers().filter((u) => u.role === "DRIVER");
+function allUsers(): User[] {
+  return [state.adminUser, state.farmer, state.customer, state.driver, state.orgUser, state.kitchenUser, ...state.directory].sort((a, b) => +new Date(b.createdAt ?? 0) - +new Date(a.createdAt ?? 0));
+}
 
 function checkMeal(b: Partial<MealInput>) {
   if (!b.name?.trim()) return "Give the meal a name.";

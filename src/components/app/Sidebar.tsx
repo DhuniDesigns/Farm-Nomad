@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { ArrowSquareOut, MagnifyingGlass, SidebarSimple } from "@phosphor-icons/react/dist/ssr";
-import { useAssignedOrdersQuery, useGetCartQuery, useKitchenMealOrdersQuery, useMyMealsQuery, useListDonationsQuery, useListFarmerOrdersQuery, useListMyProductsQuery, useMeQuery, useMyMessagesQuery, useMyOrdersQuery, useUnassignedOrdersQuery } from "@/lib/api/farmnomad";
+import { useListOrganisationsQuery, useListOrdersAdminQuery, useAssignedOrdersQuery, useGetCartQuery, useKitchenMealOrdersQuery, useMyMealsQuery, useListDonationsQuery, useListFarmerOrdersQuery, useListMyProductsQuery, useMeQuery, useMyMessagesQuery, useMyOrdersQuery, useUnassignedOrdersQuery } from "@/lib/api/farmnomad";
 import { NAV, ROLE_META, SOON } from "@/lib/navigation";
 import { stockState, type MockRole } from "@/lib/types/api";
 import { cn } from "@/lib/cn";
@@ -35,7 +35,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       {/* Workspace */}
       <div className={cn("flex h-12 items-center gap-1 px-2.5 pt-1", collapsed && "justify-center px-0")}>
         <div className={cn("flex min-w-0 items-center gap-2 rounded-[7px] p-1.5", collapsed ? "justify-center" : "flex-1")}>
-          {collapsed || role === "FARMER" || role === "ORGANISATION" || role === "KITCHEN" ? (
+          {collapsed || role === "FARMER" || role === "ORGANISATION" || role === "KITCHEN" || role === "ADMIN" ? (
             <Image src="/logo-mark.svg" alt="" width={20} height={20} className="size-5 shrink-0" />
           ) : (
             <>
@@ -45,8 +45,8 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
           )}
           {!collapsed && (
             <>
-              {(role === "FARMER" || role === "ORGANISATION" || role === "KITCHEN") && <span className="truncate font-semibold tracking-[-0.01em]">{ROLE_META[role].workspace}</span>}
-              {role !== "ORGANISATION" && role !== "KITCHEN" && <span className="ml-auto shrink-0 rounded-full bg-app-accent-soft px-1.5 text-[10px] font-semibold uppercase tracking-wide text-app-accent">{ROLE_META[role].label}</span>}
+              {(role === "FARMER" || role === "ORGANISATION" || role === "KITCHEN" || role === "ADMIN") && <span className="truncate font-semibold tracking-[-0.01em]">{ROLE_META[role].workspace}</span>}
+              {role !== "ORGANISATION" && role !== "KITCHEN" && role !== "ADMIN" && <span className="ml-auto shrink-0 rounded-full bg-app-accent-soft px-1.5 text-[10px] font-semibold uppercase tracking-wide text-app-accent">{ROLE_META[role].label}</span>}
             </>
           )}
         </div>
@@ -150,6 +150,9 @@ export function useCounts(role: MockRole): Record<string, number | undefined> {
   const farmer = role === "FARMER";
   const customer = role === "CUSTOMER" || role === "KITCHEN";
   const kitchen = role === "KITCHEN";
+  const admin = role === "ADMIN";
+  const { data: orgs } = useListOrganisationsQuery(undefined, { skip: !admin });
+  const { data: allOrders } = useListOrdersAdminQuery(undefined, { skip: !admin });
   const driver = role === "DRIVER";
   const org = role === "ORGANISATION";
   const { data: fOrders } = useListFarmerOrdersQuery(undefined, { skip: !farmer });
@@ -176,6 +179,12 @@ export function useCounts(role: MockRole): Record<string, number | undefined> {
       "/messages": unread,
     };
   if (org) return { "/donations": donations?.length, "/messages": unread };
+  if (admin)
+    return {
+      "/admin/verifications": orgs?.filter((o) => o.verificationLevel === "PENDING").length,
+      "/admin/orders": allOrders?.filter((o) => o.status === "PENDING" && !o.driverId).length,
+      "/messages": unread,
+    };
   if (kitchen)
     return {
       "/meals/orders": mealOrders?.filter((o) => o.status === "NEW").length,

@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { SignOut } from "@phosphor-icons/react/dist/ssr";
 import { useChangePasswordMutation, useMeQuery, useUpdateMeMutation } from "@/lib/api/farmnomad";
+import { ROLE_META } from "@/lib/navigation";
 import { PageHeader } from "@/components/app/PageHeader";
 import { Field, input } from "@/components/app/ProductSheet";
 import { Avatar, Button, Skeleton } from "@/components/app/ui";
@@ -61,7 +62,7 @@ export default function ProfilePage() {
               <p className="truncate font-medium">{me?.fullName ?? " "}</p>
               <p className="truncate text-app-faint">{me?.email}</p>
             </div>
-            <span className="ml-auto rounded-full bg-app-accent-soft px-2 py-0.5 text-ui-sm font-medium text-app-accent">{me?.role === "FARMER" ? "Farmer" : "Customer"}</span>
+            <span className="ml-auto rounded-full bg-app-accent-soft px-2 py-0.5 text-ui-sm font-medium text-app-accent">{me ? ROLE_META[me.role].label : ""}</span>
           </div>
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <div className="sm:col-span-2">

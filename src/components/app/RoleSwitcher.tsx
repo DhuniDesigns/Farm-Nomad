@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { CaretUpDown, Check, CookingPot, HandHeart, Plant, ShoppingBagOpen, Truck } from "@phosphor-icons/react/dist/ssr";
+import { CaretUpDown, Check, CookingPot, HandHeart, Plant, ShieldCheck, ShoppingBagOpen, Truck } from "@phosphor-icons/react/dist/ssr";
 import { HOME } from "@/lib/navigation";
 import type { MockRole } from "@/lib/types/api";
 import { useApp } from "./AppState";
@@ -15,6 +15,7 @@ const ROLES: { id: MockRole; label: string; who: string; icon: typeof Plant }[] 
   { id: "DRIVER", label: "Driver", who: "Sam · delivers orders", icon: Truck },
   { id: "ORGANISATION", label: "Food group", who: "St Mary's · claims food", icon: HandHeart },
   { id: "KITCHEN", label: "Kitchen", who: "Fishergate · cooks meals", icon: CookingPot },
+  { id: "ADMIN", label: "Admin", who: "Runs the platform", icon: ShieldCheck },
 ];
 
 /**
