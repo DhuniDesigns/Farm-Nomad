@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -9,6 +8,7 @@ import { useGetProductQuery, useListProductsQuery } from "@/lib/api/farmnomad";
 import { daysUntil } from "@/lib/types/api";
 import { useApp } from "@/components/app/AppState";
 import { ProductCard, isSurplus } from "@/components/app/shop/ProductCard";
+import { Gallery, Lightbox, PhotoGrid } from "@/components/app/shop/Gallery";
 import { QtyStepper } from "@/components/app/shop/QtyStepper";
 import { useCart } from "@/components/app/shop/useCart";
 import { Avatar, Button, EmptyState, Skeleton, gbp } from "@/components/app/ui";
@@ -22,7 +22,7 @@ export default function ProductPage() {
   const { role } = useApp();
   const { itemFor, addToCart, setQty, adding } = useCart();
   const [qty, setLocalQty] = useState(1);
-  const [img, setImg] = useState(0);
+  const [viewer, setViewer] = useState<number | null>(null);
 
   if (isLoading)
     return (
@@ -67,21 +67,13 @@ export default function ProductPage() {
 
       <div className="mx-auto grid max-w-[1100px] gap-8 px-4 pt-5 md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:gap-12 md:px-8">
         {/* Gallery */}
-        <div>
-          <div className="relative grid aspect-square place-items-center overflow-hidden rounded-3xl bg-[#F1F4EC] dark:bg-[#121912]">
-            {images[img] && <Image src={images[img]} alt={p.name} width={900} height={900} priority className={cn("w-[78%] object-contain", out && "opacity-40 grayscale")} />}
-            {isSurplus(p) && <span className="absolute left-4 top-4 rounded-full bg-app-primary px-2.5 py-1 text-ui-sm font-semibold text-app-on-primary">Surplus deal</span>}
-          </div>
-          {images.length > 1 && (
-            <div className="mt-3 flex gap-2">
-              {images.map((src, i) => (
-                <button key={src + i} onClick={() => setImg(i)} aria-label={`Photo ${i + 1}`} className={cn("grid size-16 place-items-center rounded-xl bg-app-hover", i === img && "shadow-[0_0_0_2px_var(--a-accent)]")}>
-                  <Image src={src} alt="" width={96} height={96} className="size-12 object-contain" />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <Gallery
+          images={images}
+          name={p.name}
+          dim={out}
+          onOpen={setViewer}
+          badge={isSurplus(p) && <span className="absolute left-4 top-4 rounded-full bg-app-primary px-2.5 py-1 text-ui-sm font-semibold text-app-on-primary">Surplus deal</span>}
+        />
 
         {/* Details */}
         <div className="min-w-0">
@@ -187,6 +179,9 @@ export default function ProductPage() {
           </div>
         </div>
       </div>
+
+      <PhotoGrid images={images} name={p.name} onOpen={setViewer} />
+      <Lightbox images={images} index={viewer} name={p.name} onClose={() => setViewer(null)} />
 
       {more.length > 0 && (
         <section className="mx-auto mt-16 max-w-[1100px] px-4 md:px-8" aria-labelledby="more-title">

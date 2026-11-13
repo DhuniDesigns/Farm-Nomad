@@ -11,7 +11,7 @@ import { useApp } from "./AppState";
 import { Sheet } from "./Sheet";
 import { Button, Kbd } from "./ui";
 
-const empty = { name: "", description: "", price: "", quantityAvailable: "", category: "Vegetables", bestBeforeDate: "", pickupAddress: "Hollins Farm, Moss Lane, Garstang PR3 1ZA", tags: [] as string[], coverImageUrl: "" };
+const empty = { name: "", description: "", price: "", quantityAvailable: "", category: "Vegetables", bestBeforeDate: "", pickupAddress: "Hollins Farm, Moss Lane, Garstang PR3 1ZA", tags: [] as string[], photos: [] as string[] };
 type Form = typeof empty;
 type Errors = Partial<Record<keyof Form, string>>;
 
@@ -42,7 +42,7 @@ export function ProductSheet() {
             bestBeforeDate: editing.bestBeforeDate ?? "",
             pickupAddress: editing.pickupAddress ?? "",
             tags: editing.tags ?? [],
-            coverImageUrl: editing.coverImageUrl ?? "",
+            photos: [editing.coverImageUrl, ...(editing.imageUrls ?? [])].filter(Boolean) as string[],
           }
         : empty,
     );
@@ -81,7 +81,9 @@ export function ProductSheet() {
       bestBeforeDate: f.bestBeforeDate || undefined,
       pickupAddress: f.pickupAddress || undefined,
       tags: f.tags,
-      coverImageUrl: f.coverImageUrl || undefined,
+      // Real API: coverImage (file) + images[] (files) as multipart. The first photo is the cover.
+      coverImageUrl: f.photos[0],
+      imageUrls: f.photos.slice(1),
     };
     try {
       if (editing) {
@@ -136,7 +138,7 @@ export function ProductSheet() {
       }
     >
       <form ref={formRef} onSubmit={submit} onKeyDown={onKeyDown} noValidate className="grid gap-5 px-5 py-5">
-        <CoverPicker value={f.coverImageUrl} onChange={(v) => set("coverImageUrl", v)} />
+        <PhotosPicker value={f.photos} onChange={(v) => set("photos", v)} />
 
         <Field label="Name" required error={errors.name}>
           <input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Chantenay carrots" aria-invalid={!!errors.name} className={input(!!errors.name)} />
@@ -264,46 +266,70 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
   );
 }
 
-function CoverPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+const MAX_PHOTOS = 8;
+
+/** Up to 8 photos. The first is the cover buyers see in the marketplace; any photo can be made the cover. */
+function PhotosPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const ref = useRef<HTMLInputElement>(null);
+  const add = (files: FileList | null) => {
+    if (!files) return;
+    const urls = Array.from(files)
+      .filter((f) => f.type.startsWith("image/"))
+      .map((f) => URL.createObjectURL(f));
+    onChange([...value, ...urls].slice(0, MAX_PHOTOS));
+  };
   return (
-    <div className="flex items-center gap-4">
-      <button
-        type="button"
-        onClick={() => ref.current?.click()}
-        className="group relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-app-hover shadow-[inset_0_0_0_1px_var(--a-line)] transition-transform active:scale-[0.97]"
-        aria-label={value ? "Change photo" : "Add a photo"}
-      >
-        {value ? (
-          <Image src={value} alt="" width={160} height={160} unoptimized={value.startsWith("blob:")} className="size-full object-contain p-1.5" />
-        ) : (
-          <ImageSquare className="size-6 text-app-faint transition-colors group-hover:text-app-muted" />
-        )}
-      </button>
-      <div className="grid gap-1">
-        <p className="font-medium">Cover photo</p>
-        <p className="text-ui-sm text-app-faint">A clear photo from the field sells best. JPG or PNG.</p>
-        <div className="flex gap-2">
-          <Button type="button" size="sm" onClick={() => ref.current?.click()}>
-            {value ? "Replace" : "Upload"}
-          </Button>
-          {value && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => onChange("")}>
-              Remove
-            </Button>
-          )}
-        </div>
+    <div
+      className="grid gap-2"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        add(e.dataTransfer.files);
+      }}
+    >
+      <div className="flex items-baseline justify-between">
+        <p className="font-medium">Photos</p>
+        <p className="num text-ui-sm text-app-faint">
+          {value.length} / {MAX_PHOTOS}
+        </p>
       </div>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onChange(URL.createObjectURL(file));
-        }}
-      />
+      <p className="-mt-1 text-ui-sm text-app-faint">The first photo is the cover. Add close-ups, the crate and the field. Drag files here or click to add.</p>
+      <ul className="mt-1 grid grid-cols-4 gap-2">
+        {value.map((src, i) => (
+          <li key={src + i} className="group relative aspect-square overflow-hidden rounded-xl bg-app-hover shadow-[inset_0_0_0_1px_var(--a-line)]">
+            <Image src={src} alt={`Photo ${i + 1}`} fill sizes="96px" unoptimized={src.startsWith("blob:")} className={/-cut\.|blob:/.test(src) ? "object-contain p-1.5" : "object-cover"} />
+            {i === 0 && <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur">Cover</span>}
+            <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+              {i > 0 ? (
+                <button type="button" onClick={() => onChange([src, ...value.filter((_, k) => k !== i)])} className="rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur hover:bg-black/80">
+                  Make cover
+                </button>
+              ) : (
+                <span />
+              )}
+              <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => onChange(value.filter((_, k) => k !== i))} className="grid size-5 place-items-center rounded-md bg-black/60 text-white backdrop-blur hover:bg-black/80">
+                <X weight="bold" className="size-3" />
+              </button>
+            </div>
+          </li>
+        ))}
+        {value.length < MAX_PHOTOS && (
+          <li>
+            <button
+              type="button"
+              onClick={() => ref.current?.click()}
+              className="group grid aspect-square w-full place-items-center rounded-xl text-app-faint shadow-[inset_0_0_0_1.5px_var(--a-line-strong)] [box-shadow:inset_0_0_0_1.5px_var(--a-line-strong)] transition-colors hover:bg-app-hover hover:text-app-muted"
+              aria-label="Add photos"
+            >
+              <span className="grid justify-items-center gap-1">
+                <ImageSquare className="size-5" />
+                <span className="text-[11px] font-medium">Add</span>
+              </span>
+            </button>
+          </li>
+        )}
+      </ul>
+      <input ref={ref} type="file" accept="image/*" multiple hidden onChange={(e) => (add(e.target.files), (e.target.value = ""))} />
     </div>
   );
 }

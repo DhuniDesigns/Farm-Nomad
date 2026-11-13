@@ -24,7 +24,7 @@ import {
   User as UserIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { useForgotPasswordMutation, useLoginMutation, useRegisterMutation } from "@/lib/api/farmnomad";
-import { HOME } from "@/lib/navigation";
+import { HOME, ROLE_META } from "@/lib/navigation";
 import type { MockRole, Role } from "@/lib/types/api";
 import { useApp } from "@/components/app/AppState";
 import { cn } from "@/lib/cn";
@@ -242,14 +242,14 @@ function LoginForm({ onForgot, onSignup }: { onForgot: () => void; onSignup: () 
     e?.preventDefault();
     setError(null);
     if (!as && (!email || !password)) return setError("Enter your email and password.");
-    const creds = as ? { email: as === "FARMER" ? "tom@hollinsfarm.co.uk" : "amara.okafor@example.com", password: "demo-password" } : { email, password };
+    const creds = as ? { email: ROLE_META[as].demoEmail, password: "demo-password" } : { email, password };
     try {
       const { token } = await login(creds).unwrap();
       try {
         window.localStorage.setItem("fn_token", token);
       } catch {}
       // Real API: GET /users/me → routeAfterLogin(me.role). The demo picks the role from the account.
-      const role: MockRole = as ?? (/farm/i.test(creds.email) ? "FARMER" : "CUSTOMER");
+      const role: MockRole = as ?? ((Object.keys(ROLE_META) as MockRole[]).find((r) => ROLE_META[r].demoEmail === creds.email.toLowerCase()) ?? (/farm/i.test(creds.email) ? "FARMER" : "CUSTOMER"));
       setRole(role);
       router.push(HOME[role]);
     } catch (err) {
@@ -295,14 +295,15 @@ function LoginForm({ onForgot, onSignup }: { onForgot: () => void; onSignup: () 
           Create an account
         </button>
       </p>
-      <div className="mt-8 flex items-center justify-center gap-2 text-ui-sm text-app-faint">
+      <div className="mt-8 grid justify-items-center gap-2 text-ui-sm text-app-faint">
         Explore the demo as
-        <button type="button" onClick={() => submit(null, "CUSTOMER")} className="rounded-full px-2.5 py-1 font-medium text-app-text shadow-[inset_0_0_0_1px_var(--a-line-strong)] transition-colors hover:bg-app-hover">
-          Customer
-        </button>
-        <button type="button" onClick={() => submit(null, "FARMER")} className="rounded-full px-2.5 py-1 font-medium text-app-text shadow-[inset_0_0_0_1px_var(--a-line-strong)] transition-colors hover:bg-app-hover">
-          Farmer
-        </button>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {(Object.keys(ROLE_META) as MockRole[]).map((r) => (
+            <button key={r} type="button" onClick={() => submit(null, r)} className="rounded-full px-2.5 py-1 font-medium text-app-text shadow-[inset_0_0_0_1px_var(--a-line-strong)] transition-colors hover:bg-app-hover">
+              {ROLE_META[r].label}
+            </button>
+          ))}
+        </div>
       </div>
     </>
   );
@@ -457,7 +458,7 @@ function Register({
     return (
       <>
         <SentNote email={f.email} title="Check your email" body="Open the link to verify your account, then log in." />
-        {role === "CUSTOMER" || role === "FARMER" ? (
+        {role !== "KITCHEN" ? (
           <PrimaryButton
             className="mt-8"
             onClick={() => {
@@ -469,7 +470,7 @@ function Register({
           </PrimaryButton>
         ) : (
           <p className="mt-8 rounded-[14px] bg-app-hover p-4 text-center text-ui-sm text-app-muted shadow-[inset_0_0_0_1px_var(--a-line)]">
-            The {meta.short.toLowerCase()} side of FarmNomad is still being built. We&apos;ll email you when it opens.
+            Kitchens join with NomadEat in a later release. We&apos;ll email you when it opens.
           </p>
         )}
       </>

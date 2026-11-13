@@ -1,9 +1,9 @@
-import type { CartItem, MockRole, Order, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CartItem, Donation, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 import * as db from "./db";
 
 // Copies of the sample data. Saved to the browser after every change so a reload (or the
 // Stripe-style redirect at checkout) keeps your cart, orders and edits.
-const KEY = "fn_mock_v1";
+const KEY = "fn_mock_v2";
 const fresh = () => ({
   products: structuredClone(db.products) as Product[],
   orders: structuredClone(db.orders) as Order[],
@@ -15,6 +15,16 @@ const fresh = () => ({
   customerNotifications: structuredClone(db.customerNotifications),
   cart: [] as CartItem[],
   sessions: {} as Record<string, CartItem[]>,
+  farmer: structuredClone(db.me) as User,
+  driver: structuredClone(db.driver) as User,
+  orgUser: structuredClone(db.orgUser) as User,
+  organisation: structuredClone(db.organisation) as Organisation | null,
+  donations: structuredClone(db.donations) as Donation[],
+  otherSurplus: structuredClone(db.otherSurplus) as Surplus[],
+  donationOrders: structuredClone(db.donationOrders) as Order[],
+  messages: structuredClone(db.messages) as Message[],
+  driverNotifications: structuredClone(db.driverNotifications),
+  orgNotifications: structuredClone(db.orgNotifications),
 });
 type State = ReturnType<typeof fresh>;
 const load = (): State => {
@@ -37,10 +47,30 @@ const save = () => {
 const role = (): MockRole => {
   try {
     const r = JSON.parse(window.localStorage.getItem("fn_role") ?? '"FARMER"');
-    return r === "CUSTOMER" ? "CUSTOMER" : "FARMER";
+    return ["CUSTOMER", "DRIVER", "ORGANISATION"].includes(r) ? r : "FARMER";
   } catch {
     return "FARMER";
   }
+};
+const meKey = { FARMER: "farmer", CUSTOMER: "customer", DRIVER: "driver", ORGANISATION: "orgUser" } as const;
+const currentUser = () => state[meKey[role()]];
+const notesKey = { FARMER: "notifications", CUSTOMER: "customerNotifications", DRIVER: "driverNotifications", ORGANISATION: "orgNotifications" } as const;
+
+/** Every order a driver could see: farm orders, customer orders and donation deliveries. */
+const pool = () => [...state.orders, ...state.customerOrders, ...state.donationOrders];
+const forDriver = (o: Order): Order => {
+  const p = productById(o.productId);
+  return {
+    ...o,
+    farmerName: o.farmerName ?? p?.farmerName,
+    pickupAddress: o.pickupAddress ?? p?.pickupAddress,
+    deliveryAddress: o.deliveryAddress ?? db.deliveryAddresses[o.customerName] ?? (o.customerId === state.customer.id ? [state.customer.address, state.customer.city, state.customer.postcode].filter(Boolean).join(", ") : undefined),
+  };
+};
+const NEXT: Partial<Record<OrderStatus, OrderStatus>> = { ASSIGNED: "IN_TRANSIT", IN_TRANSIT: "DELIVERED" };
+const notify = (key: (typeof notesKey)[MockRole], message: string, type: "ORDER_UPDATE" | "DONATION_UPDATE" | "SURPLUS_ALERT" = "ORDER_UPDATE") => {
+  const list = state[key];
+  list.unshift({ id: Math.max(0, ...list.map((n) => n.id)) + 1000, recipientId: 0, type, message, read: false, createdAt: new Date().toISOString() });
 };
 const productById = (id: number) => state.marketplace.find((p) => p.id === id) ?? state.products.find((p) => p.id === id);
 const withProduct = (i: CartItem): CartItem => ({ ...i, product: productById(i.productId) });
@@ -53,11 +83,12 @@ const notFound = (what: string): Res => ({ error: { status: 404, data: { message
 const nextId = (list: { id: number }[]) => Math.max(0, ...list.map((x) => x.id)) + 1;
 
 const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
-  ["GET", /^\/users\/me$/, () => ({ data: role() === "CUSTOMER" ? state.customer : db.me })],
+  ["GET", /^\/users\/me$/, () => ({ data: currentUser() })],
   ["PUT", /^\/users\/(\d+)$/, (_, r) => {
-    if (role() !== "CUSTOMER") return { data: db.me };
-    state.customer = { ...state.customer, ...(r.body as Partial<User>), id: state.customer.id, role: "CUSTOMER", email: state.customer.email };
-    return { data: state.customer };
+    const k = meKey[role()];
+    const u = state[k];
+    state[k] = { ...u, ...(r.body as Partial<User>), id: u.id, role: u.role, email: u.email };
+    return { data: state[k] };
   }],
   ["POST", /^\/auth\/change-password$/, (_, r) => {
     const { currentPassword, newPassword } = (r.body ?? {}) as { currentPassword?: string; newPassword?: string };
@@ -165,9 +196,141 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
   // Customer orders (spec §3.7). GET /orders/{id} is not documented yet; see spec §10 Q2.
   ["GET", /^\/orders\/my$/, () => ({ data: state.customerOrders })],
   ["GET", /^\/orders\/(\d+)$/, (m) => {
-    const o = state.customerOrders.find((x) => x.id === +m[1]) ?? state.orders.find((x) => x.id === +m[1]);
-    return o ? { data: o } : notFound("Order");
+    const o = pool().find((x) => x.id === +m[1]);
+    return o ? { data: forDriver(o) } : notFound("Order");
   }],
+
+  // ───────── Driver jobs (spec §3.7) ─────────
+  ["GET", /^\/orders\/unassigned$/, () => ({ data: pool().filter((o) => o.status === "PENDING" && !o.driverId && o.paymentStatus === "PAID").map(forDriver) })],
+  ["GET", /^\/orders\/assigned$/, () => ({ data: pool().filter((o) => o.driverId === state.driver.id).map(forDriver).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)) })],
+  ["PATCH", /^\/orders\/(\d+)\/assign$/, (m) => {
+    const o = pool().find((x) => x.id === +m[1]);
+    if (!o) return notFound("Order");
+    if (o.driverId && o.driverId !== state.driver.id) return { error: { status: 409, data: { message: "Another driver took this job." } } };
+    Object.assign(o, { driverId: state.driver.id, driverName: state.driver.fullName, status: "ASSIGNED", updatedAt: new Date().toISOString() });
+    notify("notifications", `${state.driver.fullName} will collect order FN-${o.id}`);
+    return { data: forDriver(o) };
+  }],
+  ["PATCH", /^\/orders\/(\d+)\/status$/, (m, r) => {
+    const o = pool().find((x) => x.id === +m[1]);
+    if (!o) return notFound("Order");
+    const to = String(r.params?.status ?? "") as OrderStatus;
+    if (NEXT[o.status] !== to) return bad(`Can't move an order from ${o.status} to ${to}.`);
+    Object.assign(o, { status: to, updatedAt: new Date().toISOString() });
+    if (o.donationId) {
+      const d = state.donations.find((x) => x.id === o.donationId);
+      if (d && to === "DELIVERED") d.status = "DELIVERED";
+    }
+    if (to === "IN_TRANSIT") notify("customerNotifications", `${state.driver.fullName} collected ${o.productName} and is on the way`);
+    if (to === "DELIVERED") notify("customerNotifications", `${o.productName} was delivered`);
+    return { data: forDriver(o) };
+  }],
+
+  // ───────── Donations (spec §3.9) ─────────
+  ["GET", /^\/donations$/, () => ({ data: state.donations.filter((d) => d.status === "PENDING") })],
+  ["GET", /^\/donations\/my\/farmer$/, () => ({ data: state.donations.filter((d) => d.farmerId === state.farmer.id) })],
+  ["GET", /^\/donations\/my\/organisation$/, () => ({ data: state.donations.filter((d) => d.organisationId === state.organisation?.id) })],
+  ["POST", /^\/donations$/, (_, r) => {
+    const { productId, quantity, note } = r.body as { productId: number; quantity: number; note?: string };
+    const p = state.products.find((x) => x.id === productId);
+    if (!p) return notFound("Product");
+    if (!Number.isInteger(quantity) || quantity < 1) return bad("Donate at least 1.");
+    if (quantity > p.quantityAvailable) return bad(`You only have ${p.quantityAvailable} in stock.`);
+    p.quantityAvailable -= quantity;
+    const d: Donation = { id: nextId(state.donations), productId, productName: p.name, quantity, status: "PENDING", farmerId: p.farmerId, farmerName: p.farmerName, coverImageUrl: p.coverImageUrl, bestBeforeDate: p.bestBeforeDate, pickupAddress: p.pickupAddress, note, createdAt: new Date().toISOString() };
+    state.donations.unshift(d);
+    notify("orgNotifications", `${p.farmerName} donated ${quantity} × ${p.name} near you`, "DONATION_UPDATE");
+    return { data: d };
+  }],
+  ["PATCH", /^\/donations\/(\d+)\/claim(-and-order)?$/, (m) => {
+    const d = state.donations.find((x) => x.id === +m[1]);
+    if (!d) return notFound("Donation");
+    if (d.status !== "PENDING") return { error: { status: 409, data: { message: "Someone else claimed this first." } } };
+    if (!state.organisation || state.organisation.verificationLevel !== "VERIFIED") return { error: { status: 403, data: { message: "Your organisation needs to be verified before it can claim." } } };
+    Object.assign(d, { status: m[2] ? "IN_DELIVERY" : "CLAIMED", organisationId: state.organisation.id, organisationName: state.organisation.name });
+    if (m[2]) {
+      // Claim and order: books a delivery that local drivers can pick up.
+      state.donationOrders.unshift({
+        id: Math.max(...pool().map((o) => o.id)) + 1,
+        productId: d.productId,
+        productName: d.productName ?? "Donation",
+        quantity: d.quantity,
+        customerId: state.orgUser.id,
+        customerName: state.organisation.name,
+        driverId: null,
+        driverName: null,
+        status: "PENDING",
+        paymentStatus: "PAID",
+        createdAt: new Date().toISOString(),
+        donationId: d.id,
+        deliveryAddress: [state.orgUser.address, state.orgUser.postcode].filter(Boolean).join(", "),
+      });
+      notify("driverNotifications", `New donation run: ${d.quantity} × ${d.productName} to ${state.organisation.name}`);
+    }
+    notify("notifications", `${state.organisation.name} claimed ${d.quantity} × ${d.productName}`, "DONATION_UPDATE");
+    return { data: d };
+  }],
+
+  // ───────── Surplus browse (spec §3.10) ─────────
+  ["GET", /^\/surplus$/, () => ({
+    data: [...state.surplus.map((s) => ({ ...s, ...pick(productById(s.productId)) })), ...state.otherSurplus].filter((s) => (s.availableQuantity ?? 0) > 0 || s.claimedByMe),
+  })],
+  ["POST", /^\/surplus\/claim\/(\d+)$/, (m) => {
+    if (!state.organisation || state.organisation.verificationLevel !== "VERIFIED") return { error: { status: 403, data: { message: "Your organisation needs to be verified before it can claim." } } };
+    const s = [...state.surplus, ...state.otherSurplus].find((x) => x.productId === +m[1] && (x.availableQuantity ?? 0) > 0);
+    if (!s) return { error: { status: 409, data: { message: "This surplus has already been claimed." } } };
+    s.availableQuantity = 0;
+    s.claimedByMe = true;
+    notify("notifications", `${state.organisation.name} claimed your surplus ${s.productName}`, "SURPLUS_ALERT");
+    return { data: s };
+  }],
+
+  // ───────── Organisations (spec §3.11). CONFIRM WITH BACKEND: GET /organisations/my is assumed. ─────────
+  ["GET", /^\/organisations\/my$/, () => (state.organisation ? { data: state.organisation } : notFound("Organisation"))],
+  ["POST", /^\/organisations$/, (_, r) => {
+    const b = r.body as Partial<Organisation>;
+    if (!b.name?.trim() || !b.type) return bad("Add a name and the type of group.");
+    state.organisation = { id: 61, name: b.name.trim(), type: b.type, charityNumber: b.charityNumber, description: b.description, verificationLevel: "PENDING", userId: state.orgUser.id, createdAt: new Date().toISOString() };
+    return { data: state.organisation };
+  }],
+  ["PUT", /^\/organisations\/(\d+)$/, (_, r) => {
+    if (!state.organisation) return notFound("Organisation");
+    const b = r.body as Partial<Organisation>;
+    state.organisation = { ...state.organisation, ...b, id: state.organisation.id, verificationLevel: state.organisation.verificationLevel };
+    return { data: state.organisation };
+  }],
+  // Demo only: reset the organisation so the apply flow can be tried.
+  ["DELETE", /^\/__mock\/organisation$/, () => {
+    state.organisation = null;
+    return { data: { ok: true } };
+  }],
+  // Demo only: approve the application (an admin does this in the real app).
+  ["POST", /^\/__mock\/organisation\/verify$/, () => {
+    if (state.organisation) state.organisation.verificationLevel = "VERIFIED";
+    return { data: state.organisation };
+  }],
+
+  // ───────── Messages (spec §3.12) ─────────
+  ["GET", /^\/messages$/, () => {
+    const id = currentUser().id;
+    return { data: state.messages.filter((x) => x.senderId === id || x.recipientId === id) };
+  }],
+  ["POST", /^\/messages$/, (_, r) => {
+    const { recipientId, content, recipientName } = r.body as { recipientId: number; content: string; recipientName?: string };
+    if (!content?.trim()) return bad("Write a message first.");
+    const me = currentUser();
+    const m: Message = { id: nextId(state.messages), senderId: me.id, senderName: me.fullName, recipientId, recipientName: db.people[recipientId]?.name ?? recipientName, content: content.trim(), read: false, createdAt: new Date().toISOString() };
+    state.messages.push(m);
+    scheduleReply(recipientId, me.id);
+    return { data: m };
+  }],
+  ["PATCH", /^\/messages\/(\d+)\/read$/, (m) => {
+    const x = state.messages.find((y) => y.id === +m[1]);
+    if (!x) return notFound("Message");
+    x.read = true;
+    return { data: x };
+  }],
+  ["GET", /^\/__mock\/people$/, () => ({ data: Object.entries(db.people).map(([id, p]) => ({ id: +id, ...p })).filter((p) => p.id !== currentUser().id) })],
 
   ["GET", /^\/products\/my$/, () => ({ data: state.products })],
   ["POST", /^\/products$/, (_, r) => {
@@ -206,9 +369,9 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: s };
   }],
 
-  ["GET", /^\/notifications\/my$/, () => ({ data: role() === "CUSTOMER" ? state.customerNotifications : state.notifications })],
+  ["GET", /^\/notifications\/my$/, () => ({ data: state[notesKey[role()]] })],
   ["PUT", /^\/notifications\/(\d+)\/read$/, (m) => {
-    const n = [...state.notifications, ...state.customerNotifications].find((x) => x.id === +m[1]);
+    const n = state[notesKey[role()]].find((x) => x.id === +m[1]);
     if (!n) return notFound("Notification");
     n.read = true;
     return { data: n };
@@ -216,6 +379,20 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
 
   ["GET", /^\/analytics\/farmer\/revenue$/, () => ({ data: db.revenueSeries })],
 ];
+
+function pick(p?: Product) {
+  return p ? { productName: p.name, farmerName: p.farmerName, coverImageUrl: p.coverImageUrl, bestBeforeDate: p.bestBeforeDate, pickupAddress: p.pickupAddress } : {};
+}
+
+/** Demo only: the other person answers a few seconds later, so threads feel alive (the UI polls). */
+const REPLIES = ["Thanks, got it.", "Sounds good.", "Great, see you then.", "No problem at all.", "Perfect, thank you!"];
+function scheduleReply(from: number, to: number) {
+  if (!db.people[from]) return;
+  setTimeout(() => {
+    state.messages.push({ id: nextId(state.messages), senderId: from, senderName: db.people[from].name, recipientId: to, recipientName: currentUser().fullName, content: REPLIES[state.messages.length % REPLIES.length], read: false, createdAt: new Date().toISOString() });
+    save();
+  }, 2500);
+}
 
 export async function handle(req: Req): Promise<Res> {
   // Feels like a network: short, slightly variable.

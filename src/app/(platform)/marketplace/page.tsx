@@ -49,7 +49,9 @@ export default function MarketplacePage() {
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
   }, []);
-  useEffect(() => setPage(1), [q, cat, price, sort, surplusOnly]);
+  useEffect(() => {
+    setPage(1);
+  }, [q, cat, price, sort, surplusOnly]);
 
   const results = useMemo(() => {
     const [, , lo, hi] = PRICES.find((p) => p[0] === price)!;

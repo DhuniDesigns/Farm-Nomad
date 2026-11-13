@@ -1,4 +1,4 @@
-import type { Notification, Order, Product, Surplus, User } from "@/lib/types/api";
+import type { Donation, Message, Notification, Order, Organisation, Product, Surplus, User } from "@/lib/types/api";
 
 // Sample data for the signed-in farmer. Names are illustrative.
 // Dates are generated relative to today so best-before warnings always look current.
@@ -100,6 +100,21 @@ export const revenueSeries = Array.from({ length: 90 }, (_, i) => {
   return { date: day.toISOString().slice(0, 10), value: Math.max(6, Math.round((base * weekend + wobble) * 100) / 100) };
 });
 
+// Extra photos per product (cover first). Farm shots fill the frame; cut-outs sit on a tint.
+const PHOTOS: Record<string, string[]> = {
+  "/images/crate-surplus-cut.webp": ["/images/step-pack-wide.webp", "/images/crate-stack-cut.webp", "/images/harvest-hands.webp"],
+  "/images/carrots-cut.webp": ["/images/harvest-hands.webp", "/images/crate-veg-cut.webp", "/images/greenhouse.webp"],
+  "/images/eggs-cut.webp": ["/images/step-pack-wide.webp", "/images/step-door-wide.webp"],
+  "/images/beetroot-cut.webp": ["/images/crate-veg-cut.webp", "/images/harvest-hands.webp", "/images/step-list-wide.webp"],
+  "/images/strawberries-cut.webp": ["/images/crate-fruit-cut.webp", "/images/greenhouse.webp"],
+  "/images/crate-veg-cut.webp": ["/images/step-pack-wide.webp", "/images/harvest-hands.webp", "/images/step-door-wide.webp", "/images/greenhouse.webp"],
+  "/images/crate-fruit-cut.webp": ["/images/strawberries-cut.webp", "/images/step-pack-wide.webp", "/images/step-load-wide.webp"],
+  "/images/crate-stack-cut.webp": ["/images/crate-veg-cut.webp", "/images/step-pack-wide.webp", "/images/step-door-wide.webp", "/images/hero.webp"],
+  "/images/bag-cut.webp": ["/images/crate-surplus-cut.webp", "/images/step-load-wide.webp"],
+};
+const withPhotos = (p: Product): Product => ({ ...p, imageUrls: p.imageUrls ?? (p.coverImageUrl ? PHOTOS[p.coverImageUrl] : undefined) });
+products.forEach((p, i) => (products[i] = withPhotos(p)));
+
 // ───────── Customer side ─────────
 
 export const customer: User = {
@@ -122,7 +137,7 @@ const farms = {
 };
 
 /** Everything listed on the marketplace: Hollins Farm's products plus other farms in the North West. */
-export const marketplace: Product[] = [
+export const marketplaceBase: Product[] = [
   ...products.filter((p) => p.quantityAvailable > 0 && (!p.bestBeforeDate || p.bestBeforeDate >= iso(0))),
   { id: 201, name: "Seasonal fruit box", category: "Fruit", price: 15, quantityAvailable: 18, bestBeforeDate: iso(7), coverImageUrl: "/images/crate-fruit-cut.webp", tags: ["Weekly", "Apples, pears, berries"], description: "Whatever's best from our orchards this week. Usually apples, pears and plums, with berries in summer.", createdAt: at(-14, 9), ...farms.ribble },
   { id: 202, name: "Strawberries", category: "Fruit", price: 3.2, quantityAvailable: 40, bestBeforeDate: iso(3), coverImageUrl: "/images/strawberries-cut.webp", tags: ["400 g punnet"], description: "Picked in the morning, packed by lunchtime.", createdAt: at(-2, 7), ...farms.ribble },
@@ -133,6 +148,8 @@ export const marketplace: Product[] = [
   { id: 207, name: "Family veg box", category: "Vegetables", price: 22, quantityAvailable: 25, bestBeforeDate: iso(6), coverImageUrl: "/images/crate-stack-cut.webp", tags: ["Weekly", "Serves 4 to 5"], description: "A bigger box for families: roots, greens, salad and a little fruit.", createdAt: at(-20, 9), ...farms.fylde },
   { id: 208, name: "Surplus grocery bag", category: "Other", price: 6.5, quantityAvailable: 9, bestBeforeDate: iso(2), coverImageUrl: "/images/bag-cut.webp", tags: ["Surplus", "Mixed"], description: "A mixed bag of surplus from farms on today's route: greens, peppers, eggs and more.", createdAt: at(0, 8), ...farms.bowland },
 ];
+
+export const marketplace = marketplaceBase.map(withPhotos);
 
 export const customerOrders: Order[] = [
   { id: 2101, productId: 106, productName: "Mixed veg box", quantity: 2, status: "IN_TRANSIT", paymentStatus: "PAID", driverId: 901, driverName: "Grace Moore", d: 0, h: 9 },
@@ -146,4 +163,152 @@ export const customerNotifications: Notification[] = [
   { id: 41, recipientId: customer.id, type: "ORDER_UPDATE", message: "Grace Moore is on the way with your Mixed veg box", read: false, createdAt: at(0, 10, 5) },
   { id: 42, recipientId: customer.id, type: "ORDER_UPDATE", message: "Ribble Fruit packed your strawberries", read: false, createdAt: at(0, 8, 40) },
   { id: 43, recipientId: customer.id, type: "SYSTEM", message: "New this week: surplus boxes from Moss Lane Farm", read: true, createdAt: at(-1, 17) },
+];
+
+// ───────── Driver side ─────────
+
+export const driver: User = {
+  id: 900,
+  fullName: "Sam Patel",
+  email: "sam.patel@example.com",
+  role: "DRIVER",
+  phoneNumber: "07700 900456",
+  address: "3 Deepdale Road",
+  city: "Preston",
+  postcode: "PR1 6PA",
+  country: "United Kingdom",
+};
+
+/** Where each customer's order goes. Illustrative addresses around Preston and Lancaster. */
+export const deliveryAddresses: Record<string, string> = {
+  "Amara Okafor": "14 Fishergate Hill, Preston PR1 8JA",
+  "The Pantry, Preston": "22 Winckley Square, Preston PR1 3JJ",
+  "Ben Whitfield": "8 Garstang Road, Broughton PR3 5JB",
+  "Lancaster Uni Catering": "Bailrigg House, Lancaster LA1 4YW",
+  "Priya Shah": "41 Watling Street Road, Fulwood PR2 8BP",
+  "Moss Lane Café": "2 Market Place, Garstang PR3 1ZA",
+  "Jack Riley": "17 Ribbleton Avenue, Preston PR1 5RP",
+  "Sophie Turner": "5 Station Road, Kirkham PR4 2HA",
+  "Ribble Valley Deli": "12 King Street, Clitheroe BB7 2EP",
+  "Hannah Lewis": "29 Moor Lane, Lancaster LA1 1QD",
+  "St Mary's Food Bank": "St Mary's Hall, Friargate, Preston PR1 2EE",
+};
+
+// ───────── Organisation side ─────────
+
+export const orgUser: User = {
+  id: 601,
+  fullName: "Ruth Ellis",
+  email: "ruth@stmarysfoodbank.org.uk",
+  role: "ORGANISATION",
+  phoneNumber: "01772 000123",
+  address: "St Mary's Hall, Friargate",
+  city: "Preston",
+  postcode: "PR1 2EE",
+  country: "United Kingdom",
+};
+
+export const organisation: Organisation = {
+  id: 61,
+  name: "St Mary's Food Bank",
+  type: "FOODBANK",
+  charityNumber: "1123456",
+  verificationLevel: "VERIFIED",
+  userId: orgUser.id,
+  createdAt: at(-120, 10),
+  description: "Weekly food parcels for around 80 households in central Preston.",
+};
+
+const ORG = { organisationId: organisation.id, organisationName: organisation.name };
+const enrich = (productId: number) => {
+  const p = [...products, ...marketplace].find((x) => x.id === productId)!;
+  return { productName: p.name, farmerId: p.farmerId, farmerName: p.farmerName, coverImageUrl: p.coverImageUrl, bestBeforeDate: p.bestBeforeDate, pickupAddress: p.pickupAddress };
+};
+
+export const donations: Donation[] = [
+  // Hollins Farm's own donations (farmer view)
+  { id: 401, productId: 108, quantity: 5, status: "PENDING", createdAt: at(0, 8, 30), note: "Leaves a little wilted, fine for cooking.", ...enrich(108) },
+  { id: 402, productId: 103, quantity: 24, status: "CLAIMED", createdAt: at(-2, 9), ...ORG, ...enrich(103) },
+  { id: 403, productId: 101, quantity: 30, status: "DELIVERED", createdAt: at(-8, 10), organisationId: 62, organisationName: "Preston Community Pantry", ...enrich(101) },
+  { id: 404, productId: 107, quantity: 4, status: "DELIVERED", createdAt: at(-15, 14), ...ORG, ...enrich(107) },
+  // Other farms, open for food groups to claim
+  { id: 411, productId: 203, quantity: 12, status: "PENDING", createdAt: at(0, 7, 15), note: "Mixed roots, all sound.", ...enrich(203) },
+  { id: 412, productId: 205, quantity: 20, status: "PENDING", createdAt: at(-1, 16), ...enrich(205) },
+  { id: 413, productId: 201, quantity: 6, status: "PENDING", createdAt: at(-1, 11), ...enrich(201) },
+  { id: 414, productId: 204, quantity: 36, status: "PENDING", createdAt: at(0, 6, 50), note: "Odd sizes, fully fresh.", ...enrich(204) },
+  // Earlier claims by St Mary's
+  { id: 420, productId: 207, quantity: 5, status: "IN_DELIVERY", createdAt: at(-1, 9), ...ORG, ...enrich(207) },
+  { id: 421, productId: 202, quantity: 10, status: "DELIVERED", createdAt: at(-9, 8), ...ORG, ...enrich(202) },
+];
+
+/** Surplus across all farms, for food groups to browse (spec §7.10 /surplus). */
+export const otherSurplus: Surplus[] = [
+  { id: 311, productId: 203, quantity: 10, availableQuantity: 10, createdAt: at(0, 9), ...enrich(203) },
+  { id: 312, productId: 205, quantity: 20, availableQuantity: 14, createdAt: at(-1, 13), ...enrich(205) },
+  { id: 313, productId: 201, quantity: 6, availableQuantity: 6, createdAt: at(-1, 10), ...enrich(201) },
+  { id: 314, productId: 208, quantity: 8, availableQuantity: 8, createdAt: at(0, 8, 20), ...enrich(208) },
+];
+
+// ───────── Messages (spec §3.12) ─────────
+
+/** Everyone the demo knows, so threads show names. */
+export const people: Record<number, { name: string; role: string }> = {
+  7: { name: "Tom Hollins", role: "Hollins Farm" },
+  11: { name: "Ribble Fruit", role: "Farm" },
+  12: { name: "Moss Lane Farm", role: "Farm" },
+  501: { name: "Amara Okafor", role: "Customer" },
+  503: { name: "Lancaster Uni Catering", role: "Customer" },
+  601: { name: "Ruth Ellis", role: "St Mary's Food Bank" },
+  900: { name: "Sam Patel", role: "Driver" },
+  901: { name: "Grace Moore", role: "Driver" },
+};
+
+const msg = (id: number, from: number, to: number, content: string, d: number, h: number, m: number, read = true): Message => ({
+  id,
+  senderId: from,
+  senderName: people[from]?.name,
+  recipientId: to,
+  recipientName: people[to]?.name,
+  content,
+  read,
+  createdAt: at(d, h, m),
+});
+
+export const messages: Message[] = [
+  // Farmer ↔ driver
+  msg(1, 900, 7, "Morning Tom, I'm picking up the potatoes for Lancaster Uni around 2. Is the yard gate open?", 0, 9, 12),
+  msg(2, 7, 900, "Yes, gate's open. Crates are by the barn door, 25 kg labelled.", 0, 9, 20),
+  msg(3, 900, 7, "Perfect, thanks. Will message when I'm on the way.", 0, 9, 22, false),
+  // Farmer ↔ food bank
+  msg(4, 601, 7, "Thank you for the eggs on Tuesday. They went out in Thursday's parcels.", -1, 15, 4),
+  msg(5, 7, 601, "Glad they helped. I've got kale coming up spare this week if that's useful.", -1, 15, 30),
+  msg(6, 601, 7, "Yes please, we'll claim it as soon as it's listed.", 0, 8, 41, false),
+  // Farmer ↔ customer
+  msg(7, 503, 7, "Could we move next week's potato order to Wednesday?", -2, 11, 0),
+  msg(8, 7, 503, "No problem, Wednesday works.", -2, 11, 45),
+  // Customer ↔ driver / farm
+  msg(9, 901, 501, "Hi Amara, I'm about 10 minutes away with your veg box.", 0, 10, 5, false),
+  msg(10, 501, 11, "Are the strawberries this week sweet ones?", -1, 18, 2),
+  msg(11, 11, 501, "Very! First pick of the new beds.", -1, 18, 30),
+  // Driver ↔ customer
+  msg(12, 900, 501, "I've got your strawberries, I'll be with you after my Fulwood drop.", 0, 8, 50),
+  // Food bank ↔ farm
+  msg(13, 12, 601, "We've put a box of roots up as a donation if St Mary's wants it.", 0, 7, 20, false),
+];
+
+export const driverNotifications: Notification[] = [
+  { id: 61, recipientId: driver.id, type: "ORDER_UPDATE", message: "3 new jobs near Garstang are waiting for a driver", read: false, createdAt: at(0, 11, 10) },
+  { id: 62, recipientId: driver.id, type: "ORDER_UPDATE", message: "Lancaster Uni Catering's order is ready to collect at Hollins Farm", read: false, createdAt: at(0, 9, 5) },
+  { id: 63, recipientId: driver.id, type: "SYSTEM", message: "Your documents were approved. You can take jobs now.", read: true, createdAt: at(-6, 12) },
+];
+
+export const orgNotifications: Notification[] = [
+  { id: 71, recipientId: orgUser.id, type: "DONATION_UPDATE", message: "Moss Lane Farm donated 12 × Surplus veg box near you", read: false, createdAt: at(0, 7, 16) },
+  { id: 72, recipientId: orgUser.id, type: "SURPLUS_ALERT", message: "New surplus: 8 × Surplus grocery bag from Bowland Dairy", read: false, createdAt: at(0, 8, 21) },
+  { id: 73, recipientId: orgUser.id, type: "DONATION_UPDATE", message: "Your Family veg box donation is on its way with Grace Moore", read: true, createdAt: at(-1, 10) },
+];
+
+/** Deliveries booked through "claim and request delivery" (spec §3.9 claim-and-order). */
+export const donationOrders: Order[] = [
+  { id: 2201, productId: 207, productName: "Family veg box", quantity: 5, customerId: orgUser.id, customerName: organisation.name, driverId: 901, driverName: "Grace Moore", status: "IN_TRANSIT", paymentStatus: "PAID", createdAt: at(-1, 9, 30), donationId: 420 },
 ];

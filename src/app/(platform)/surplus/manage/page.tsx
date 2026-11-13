@@ -89,7 +89,7 @@ export default function SurplusManagePage() {
             </ul>
           )}
         </section>
-        <p className="text-ui-sm text-app-faint">Food groups are verified before they can claim. You'll get a notification when someone does.</p>
+        <p className="text-ui-sm text-app-faint">Food groups are verified before they can claim. You&apos;ll get a notification when someone does.</p>
       </div>
     </div>
   );

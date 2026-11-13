@@ -9,6 +9,8 @@ import { HOME } from "@/lib/navigation";
 export default function Dashboard() {
   const { role } = useApp();
   const router = useRouter();
-  useEffect(() => router.replace(HOME[role]), [role, router]);
+  useEffect(() => {
+    router.replace(HOME[role]);
+  }, [role, router]);
   return null;
 }

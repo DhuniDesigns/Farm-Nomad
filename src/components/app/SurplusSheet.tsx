@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Minus, Plus } from "@phosphor-icons/react/dist/ssr";
-import { useCreateSurplusMutation, useListMyProductsQuery } from "@/lib/api/farmnomad";
+import { useCreateDonationMutation, useCreateSurplusMutation, useListMyProductsQuery } from "@/lib/api/farmnomad";
 import { daysUntil, stockState } from "@/lib/types/api";
 import { cn } from "@/lib/cn";
 import { useApp } from "./AppState";
@@ -12,13 +12,24 @@ import { Field, input } from "./ProductSheet";
 import { Sheet } from "./Sheet";
 import { Button, Pill } from "./ui";
 
-/** Flag surplus: pick one of your products (never a raw ID, per spec 1.9), then how much. */
-export function SurplusSheet() {
-  const { surplusSheet, setSurplusSheet } = useApp();
+/**
+ * Give stock away. Two modes share one form: pick one of your products (never a raw ID, spec 1.9),
+ * then how much.
+ * - surplus: flag stock for food groups to claim (POST /surplus, to confirm with backend)
+ * - donate: donate it outright (POST /donations {productId, quantity}, spec §3.9)
+ */
+export function SurplusSheet({ mode = "surplus" }: { mode?: "surplus" | "donate" }) {
+  const app = useApp();
+  const donate = mode === "donate";
+  const open = donate ? !!app.donateSheet : app.surplusSheet;
+  const preset = donate ? app.donateSheet?.productId : undefined;
   const { data: products = [] } = useListMyProductsQuery();
-  const [create, { isLoading }] = useCreateSurplusMutation();
+  const [createSurplus, s1] = useCreateSurplusMutation();
+  const [createDonation, s2] = useCreateDonationMutation();
+  const isLoading = s1.isLoading || s2.isLoading;
   const [pid, setPid] = useState<number | null>(null);
   const [qty, setQty] = useState(1);
+  const [note, setNote] = useState("");
 
   // Soonest best-before first: those are the ones worth flagging.
   const sorted = useMemo(
@@ -28,37 +39,43 @@ export function SurplusSheet() {
   const chosen = sorted.find((p) => p.id === pid);
 
   useEffect(() => {
-    if (surplusSheet) {
-      setPid(sorted[0]?.id ?? null);
+    if (open) {
+      setPid(preset ?? sorted[0]?.id ?? null);
       setQty(1);
+      setNote("");
     }
-  }, [surplusSheet]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const max = chosen?.quantityAvailable ?? 1;
-  const close = () => setSurplusSheet(false);
+  const close = () => (donate ? app.setDonateSheet(null) : app.setSurplusSheet(false));
 
   async function submit() {
     if (!chosen) return;
     try {
-      await create({ productId: chosen.id, quantity: qty }).unwrap();
-      toast.success("Surplus flagged", { description: `Food groups nearby can now claim ${qty} × ${chosen.name}.` });
+      if (donate) {
+        await createDonation({ productId: chosen.id, quantity: qty, note: note.trim() || undefined }).unwrap();
+        toast.success("Donation listed", { description: `Verified food groups nearby can now claim ${qty} × ${chosen.name}.` });
+      } else {
+        await createSurplus({ productId: chosen.id, quantity: qty }).unwrap();
+        toast.success("Surplus flagged", { description: `Food groups nearby can now claim ${qty} × ${chosen.name}.` });
+      }
       close();
-    } catch {
-      toast.error("That didn't go through", { description: "Try again in a moment." });
+    } catch (e) {
+      toast.error((e as { data?: { message?: string } })?.data?.message ?? "That didn't go through", { description: "Try again in a moment." });
     }
   }
 
   return (
     <Sheet
-      open={surplusSheet}
+      open={open}
       onClose={close}
-      title="Flag surplus"
-      subtitle="Verified food groups nearby are told straight away."
+      title={donate ? "Donate produce" : "Flag surplus"}
+      subtitle={donate ? "Free to verified food banks, schools and community groups nearby. It comes off your stock." : "Verified food groups nearby are told straight away."}
       footer={
         <>
           <Button variant="ghost" onClick={close}>Cancel</Button>
           <Button variant="primary" onClick={submit} disabled={!chosen || isLoading}>
-            Flag {qty} {qty === 1 ? "unit" : "units"}
+            {donate ? "Donate" : "Flag"} {qty} {qty === 1 ? "unit" : "units"}
           </Button>
         </>
       }
@@ -124,6 +141,11 @@ export function SurplusSheet() {
             </Button>
           </div>
         </Field>
+        {donate && (
+          <Field label="Note for food groups" hint="Optional. Condition, collection times, anything useful.">
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={240} placeholder="e.g. A little wilted, fine for cooking. Collect before 4pm." className={cn(input(false), "h-auto resize-none py-2")} />
+          </Field>
+        )}
       </div>
     </Sheet>
   );

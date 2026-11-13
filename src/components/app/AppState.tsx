@@ -25,6 +25,9 @@ type Ctx = {
   setProductSheet: (s: ProductSheet) => void;
   surplusSheet: boolean;
   setSurplusSheet: (v: boolean) => void;
+  /** Donate sheet: null closed, {} open, {productId} open with that product picked. */
+  donateSheet: { productId?: number } | null;
+  setDonateSheet: (v: { productId?: number } | null) => void;
 };
 
 const AppCtx = createContext<Ctx | null>(null);
@@ -53,13 +56,17 @@ export function AppState({ children }: { children: ReactNode }) {
   if (!storeRef.current) storeRef.current = makeStore();
 
   const [theme, setThemeState] = useState<Theme>("system");
-  const [role, setRoleState] = useState<MockRole>(() => read<MockRole>("fn_role", "FARMER"));
+  const [role, setRoleState] = useState<MockRole>(() => {
+    const r = read<string>("fn_role", "FARMER");
+    return (["FARMER", "CUSTOMER", "DRIVER", "ORGANISATION"].includes(r) ? r : "FARMER") as MockRole;
+  });
   const [systemDark, setSystemDark] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [command, setCommand] = useState(false);
   const [productSheet, setProductSheet] = useState<ProductSheet>(null);
   const [surplusSheet, setSurplusSheet] = useState(false);
+  const [donateSheet, setDonateSheet] = useState<{ productId?: number } | null>(null);
 
   useEffect(() => {
     setThemeState(read<Theme>("fn_theme", "system"));
@@ -105,8 +112,10 @@ export function AppState({ children }: { children: ReactNode }) {
       setProductSheet,
       surplusSheet,
       setSurplusSheet,
+      donateSheet,
+      setDonateSheet,
     }),
-    [role, setRole, theme, setTheme, systemDark, collapsed, toggleCollapsed, mobileNav, command, productSheet, surplusSheet],
+    [role, setRole, theme, setTheme, systemDark, collapsed, toggleCollapsed, mobileNav, command, productSheet, surplusSheet, donateSheet],
   );
 
   return (

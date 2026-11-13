@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight, HandHeart, Plus } from "@phosphor-icons/react/dist/ssr";
+import { ArrowRight, ArrowUpRight, Gift, HandHeart, Plus } from "@phosphor-icons/react/dist/ssr";
 import { useFarmerRevenueQuery, useListFarmerOrdersQuery, useListMyProductsQuery, useListMySurplusQuery, useMeQuery } from "@/lib/api/farmnomad";
 import { daysUntil, stockState, type Order, type Product } from "@/lib/types/api";
 import { useApp } from "@/components/app/AppState";
@@ -26,7 +26,7 @@ export default function FarmerDashboard() {
   const { data: orders } = useListFarmerOrdersQuery();
   const { data: products } = useListMyProductsQuery();
   const { data: surplus } = useListMySurplusQuery();
-  const { setProductSheet, setSurplusSheet } = useApp();
+  const { setProductSheet, setSurplusSheet, setDonateSheet } = useApp();
   const [range, setRange] = useState<number>(30);
 
   const rev = useMemo(() => {
@@ -57,6 +57,9 @@ export default function FarmerDashboard() {
         description={new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
         actions={
           <>
+            <Button onClick={() => setDonateSheet({})} className="hidden sm:inline-flex">
+              <Gift className="size-4" /> Donate
+            </Button>
             <Button onClick={() => setSurplusSheet(true)}>
               <HandHeart className="size-4" /> Flag surplus
             </Button>

@@ -4,7 +4,7 @@ import { Command } from "cmdk";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Desktop, HandHeart, Moon, Plus, Sun, ArrowRight } from "@phosphor-icons/react/dist/ssr";
+import { Desktop, Gift, HandHeart, Moon, Plus, Sun, ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { useListMyProductsQuery } from "@/lib/api/farmnomad";
 import { useApp } from "./AppState";
 import { NAV } from "@/lib/navigation";
@@ -16,11 +16,11 @@ import { Kbd, gbp } from "./ui";
  * No open animation delay on repeat use: it scales in from 0.98 in 150ms and closes faster.
  */
 export function CommandMenu() {
-  const { role, command, setCommand, setProductSheet, setSurplusSheet, setTheme } = useApp();
+  const { role, command, setCommand, setProductSheet, setSurplusSheet, setDonateSheet, setTheme } = useApp();
   const farmer = role === "FARMER";
   const router = useRouter();
   const { data: mine } = useListMyProductsQuery(undefined, { skip: !farmer });
-  const { data: market } = useListProductsQuery(undefined, { skip: farmer });
+  const { data: market } = useListProductsQuery(undefined, { skip: role !== "CUSTOMER" });
   const products = farmer ? mine : market;
 
   const run = (fn: () => void) => {
@@ -59,7 +59,7 @@ export function CommandMenu() {
             >
               <Command.Input
                 autoFocus
-                placeholder={farmer ? "Search products, pages and actions" : "Search produce, farms and pages"}
+                placeholder={farmer ? "Search products, pages and actions" : role === "CUSTOMER" ? "Search produce, farms and pages" : "Search pages and actions"}
                 className="h-14 w-full border-b border-app-line bg-transparent px-5 text-[15px] text-app-text outline-none placeholder:text-app-faint"
               />
               <Command.List className="max-h-[min(420px,55vh)] overflow-y-auto overscroll-contain p-2 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:text-ui-sm [&_[cmdk-group-heading]]:text-app-faint">
@@ -71,6 +71,9 @@ export function CommandMenu() {
                   </Command.Item>
                   <Command.Item className={item} onSelect={() => run(() => setSurplusSheet(true))}>
                     <HandHeart className="size-4" /> Flag surplus
+                  </Command.Item>
+                  <Command.Item className={item} onSelect={() => run(() => setDonateSheet({}))}>
+                    <Gift className="size-4" /> Donate produce
                   </Command.Item>
                 </Command.Group>}
 

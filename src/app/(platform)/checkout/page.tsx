@@ -152,7 +152,7 @@ export default function CheckoutPage() {
           <Button variant="primary" className="mt-5 h-11 w-full text-[14px]" onClick={pay} disabled={paying || !items?.length}>
             <Lock weight="fill" className="size-4" /> {paying ? "Opening secure payment" : `Pay ${gbp(subtotal)}`}
           </Button>
-          <p className="mt-3 text-center text-ui-sm text-app-faint">You'll enter your card on Stripe's secure page. FarmNomad never sees your card details.</p>
+          <p className="mt-3 text-center text-ui-sm text-app-faint">You&apos;ll enter your card on Stripe&apos;s secure page. FarmNomad never sees your card details.</p>
         </aside>
       </div>
     </div>

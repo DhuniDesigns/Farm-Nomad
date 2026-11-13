@@ -16,7 +16,7 @@ const typing = (t: EventTarget | null) => {
  */
 export function useShortcuts() {
   const router = useRouter();
-  const { role, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet } = useApp();
+  const { role, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet, donateSheet } = useApp();
   const pendingG = useRef<number | null>(null);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function useShortcuts() {
         setCommand(!command);
         return;
       }
-      if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target) || command || productSheet || surplusSheet) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target) || command || productSheet || surplusSheet || donateSheet) return;
       const k = e.key.toLowerCase();
 
       if (pendingG.current) {
@@ -51,5 +51,5 @@ export function useShortcuts() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [role, router, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet]);
+  }, [role, router, setCommand, command, setProductSheet, toggleCollapsed, productSheet, surplusSheet, donateSheet]);
 }

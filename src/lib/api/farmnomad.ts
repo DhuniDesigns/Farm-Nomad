@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
-import type { CartItem, CheckoutSession, Notification, Order, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CartItem, CheckoutSession, Donation, Message, Notification, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 
 /**
  * One switch between sample data and the Spring Boot API.
@@ -27,7 +27,7 @@ const mockBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryErro
 export const api = createApi({
   reducerPath: "api",
   baseQuery: USE_MOCKS ? mockBaseQuery : realBaseQuery,
-  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders"],
+  tagTypes: ["Product", "Order", "Surplus", "Notification", "Me", "Cart", "Market", "MyOrders", "Jobs", "Donation", "Org", "Messages"],
   endpoints: (b) => ({
     me: b.query<User, void>({ query: () => "/users/me", providesTags: ["Me"] }),
 
@@ -106,6 +106,64 @@ export const api = createApi({
     // CONFIRM WITH BACKEND: GET /orders/{id} is not documented (spec §10 Q2).
     getOrder: b.query<Order, number>({ query: (id) => `/orders/${id}`, providesTags: ["MyOrders"] }),
 
+    // ───────── Driver jobs (spec §3.7) ─────────
+    assignedOrders: b.query<Order[], void>({ query: () => "/orders/assigned", providesTags: ["Jobs"] }),
+    unassignedOrders: b.query<Order[], void>({ query: () => "/orders/unassigned", providesTags: ["Jobs"] }),
+    assignOrder: b.mutation<Order, number>({
+      // Driver → self: driverId is optional (required only for admin).
+      query: (id) => ({ url: `/orders/${id}/assign`, method: "PATCH" }),
+      invalidatesTags: ["Jobs", "Order", "MyOrders", "Notification"],
+    }),
+    updateOrderStatus: b.mutation<Order, { id: number; status: OrderStatus }>({
+      query: ({ id, status }) => ({ url: `/orders/${id}/status`, method: "PATCH", params: { status } }),
+      invalidatesTags: ["Jobs", "Order", "MyOrders", "Donation", "Notification"],
+    }),
+
+    // ───────── Donations (spec §3.9) ─────────
+    listDonations: b.query<Donation[], void>({ query: () => "/donations", providesTags: ["Donation"] }),
+    myFarmerDonations: b.query<Donation[], void>({ query: () => "/donations/my/farmer", providesTags: ["Donation"] }),
+    myOrganisationDonations: b.query<Donation[], void>({ query: () => "/donations/my/organisation", providesTags: ["Donation"] }),
+    createDonation: b.mutation<Donation, { productId: number; quantity: number; note?: string }>({
+      query: (body) => ({ url: "/donations", method: "POST", body }),
+      invalidatesTags: ["Donation", "Product"],
+    }),
+    // organisationId is only required when the caller is ADMIN; omitted for ORGANISATION.
+    claimDonation: b.mutation<Donation, { id: number; withDelivery?: boolean }>({
+      query: ({ id, withDelivery }) => ({ url: `/donations/${id}/${withDelivery ? "claim-and-order" : "claim"}`, method: "PATCH" }),
+      invalidatesTags: ["Donation", "Jobs", "Notification"],
+    }),
+
+    // ───────── Surplus browse (spec §3.10) ─────────
+    listSurplus: b.query<Surplus[], void>({ query: () => "/surplus", providesTags: ["Surplus"] }),
+    claimSurplus: b.mutation<Surplus, number>({ query: (productId) => ({ url: `/surplus/claim/${productId}`, method: "POST" }), invalidatesTags: ["Surplus", "Notification"] }),
+
+    // ───────── Organisations (spec §3.11). CONFIRM WITH BACKEND: GET /organisations/my is assumed. ─────────
+    myOrganisation: b.query<Organisation | null, void>({
+      query: () => "/organisations/my",
+      // No organisation yet → 404, and the page shows the apply form.
+      providesTags: ["Org"],
+    }),
+    createOrganisation: b.mutation<Organisation, Pick<Organisation, "name" | "type" | "charityNumber" | "description">>({
+      query: (body) => ({ url: "/organisations", method: "POST", body }),
+      invalidatesTags: ["Org"],
+    }),
+    updateOrganisation: b.mutation<Organisation, { id: number } & Partial<Organisation>>({
+      query: ({ id, ...body }) => ({ url: `/organisations/${id}`, method: "PUT", body }),
+      invalidatesTags: ["Org"],
+    }),
+    mockResetOrganisation: b.mutation<{ ok: boolean }, void>({ query: () => ({ url: "/__mock/organisation", method: "DELETE" }), invalidatesTags: ["Org"] }),
+    mockVerifyOrganisation: b.mutation<Organisation, void>({ query: () => ({ url: "/__mock/organisation/verify", method: "POST" }), invalidatesTags: ["Org"] }),
+
+    // ───────── Messages (spec §3.12). Polls until STOMP lands. ─────────
+    myMessages: b.query<Message[], void>({ query: () => "/messages", providesTags: ["Messages"] }),
+    sendMessage: b.mutation<Message, { recipientId: number; content: string; recipientName?: string }>({
+      // recipientName is a hint for the mock only; the API takes recipientId and content.
+      query: (body) => ({ url: "/messages", method: "POST", body }),
+      invalidatesTags: ["Messages"],
+    }),
+    markMessageRead: b.mutation<Message, number>({ query: (id) => ({ url: `/messages/${id}/read`, method: "PATCH" }), invalidatesTags: ["Messages"] }),
+    people: b.query<{ id: number; name: string; role: string }[], void>({ query: () => "/__mock/people" }),
+
     // CONFIRM WITH BACKEND: revenue analytics endpoint is not documented yet.
     farmerRevenue: b.query<{ date: string; value: number }[], void>({ query: () => "/analytics/farmer/revenue" }),
   }),
@@ -140,4 +198,24 @@ export const {
   useConfirmCheckoutMutation,
   useMyOrdersQuery,
   useGetOrderQuery,
+  useAssignedOrdersQuery,
+  useUnassignedOrdersQuery,
+  useAssignOrderMutation,
+  useUpdateOrderStatusMutation,
+  useListDonationsQuery,
+  useMyFarmerDonationsQuery,
+  useMyOrganisationDonationsQuery,
+  useCreateDonationMutation,
+  useClaimDonationMutation,
+  useListSurplusQuery,
+  useClaimSurplusMutation,
+  useMyOrganisationQuery,
+  useCreateOrganisationMutation,
+  useUpdateOrganisationMutation,
+  useMockResetOrganisationMutation,
+  useMockVerifyOrganisationMutation,
+  useMyMessagesQuery,
+  useSendMessageMutation,
+  useMarkMessageReadMutation,
+  usePeopleQuery,
 } = api;

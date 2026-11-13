@@ -102,7 +102,7 @@ export default function OrderDetailPage() {
                 <p className="font-medium">{o.driverName}</p>
                 <p className="text-ui-sm text-app-faint">Local FarmNomad driver</p>
               </div>
-              <Link href="/messages" aria-label={`Message ${o.driverName}`} className="grid size-8 place-items-center rounded-full text-app-muted shadow-[0_0_0_1px_var(--a-line-strong)] transition-colors hover:bg-app-hover hover:text-app-text">
+              <Link href={`/messages?to=${o.driverId}&name=${encodeURIComponent(o.driverName ?? "")}`} aria-label={`Message ${o.driverName}`} className="grid size-8 place-items-center rounded-full text-app-muted shadow-[0_0_0_1px_var(--a-line-strong)] transition-colors hover:bg-app-hover hover:text-app-text">
                 <ChatsCircle className="size-4" />
               </Link>
             </div>

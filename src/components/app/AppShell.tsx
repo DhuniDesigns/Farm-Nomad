@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { Bell, Check, HandHeart, List, Package, Receipt, ShoppingBagOpen } from "@phosphor-icons/react/dist/ssr";
 import { useGetCartQuery, useMarkNotificationReadMutation, useMyNotificationsQuery } from "@/lib/api/farmnomad";
-import { HOME, NAV, allNav } from "@/lib/navigation";
+import { HOME, NAV, ROLE_META, allNav, canOpen } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
 import { AppState, useApp } from "./AppState";
 import { CommandMenu } from "./CommandMenu";
@@ -20,7 +20,9 @@ import { useShortcuts } from "./useShortcuts";
 export function AppShell({ children }: { children: ReactNode }) {
   // Signed-in, per-user screens: render on the client only (no prerender of user data or clocks).
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   if (!mounted) return <div className="fn-app h-[100dvh]" aria-busy="true" />;
   return (
     <AppState>
@@ -35,12 +37,13 @@ function Frame({ children }: { children: ReactNode }) {
   const router = useRouter();
   useShortcuts();
 
-  useEffect(() => setMobileNav(false), [path, setMobileNav]);
+  useEffect(() => {
+    setMobileNav(false);
+  }, [path, setMobileNav]);
 
   // Keep each role on its own pages (stand-in for RoleGuard until real auth lands).
-  const farmerOnly = ["/dashboard/farmer", "/products", "/surplus/manage"];
-  const customerOnly = ["/cart", "/checkout"];
-  const blocked = (role === "CUSTOMER" ? farmerOnly : customerOnly).some((r) => path === r || path.startsWith(r + "/"));
+  const blocked = !canOpen(role, path);
+  const tabs = role === "CUSTOMER" || role === "DRIVER";
   useEffect(() => {
     if (blocked) router.replace(HOME[role]);
   }, [blocked, role, router]);
@@ -71,17 +74,18 @@ function Frame({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
-        <main className={cn("min-h-0 flex-1 overflow-y-auto", role === "CUSTOMER" && "pb-16 md:pb-0")}>{blocked ? null : children}</main>
-        {role === "CUSTOMER" && <TabBar />}
+        <main className={cn("min-h-0 flex-1 overflow-y-auto", tabs && "pb-16 md:pb-0")}>{blocked ? null : children}</main>
+        {tabs && <TabBar />}
       </div>
 
       <CommandMenu />
       <ProductSheet />
       <SurplusSheet />
+      <SurplusSheet mode="donate" />
       <Toaster
         theme={resolvedDark ? "dark" : "light"}
         position="bottom-right"
-        mobileOffset={{ bottom: role === "CUSTOMER" ? 76 : 16 }}
+        mobileOffset={{ bottom: tabs ? 76 : 16 }}
         closeButton
         toastOptions={{ style: { fontFamily: "var(--font-ui)", fontSize: 13, borderRadius: 10 } }}
       />
@@ -92,14 +96,16 @@ function Frame({ children }: { children: ReactNode }) {
 function TopBar() {
   const path = usePathname();
   const { role, setMobileNav } = useApp();
-  const page = path.startsWith("/checkout") ? { label: "Checkout" } : allNav.find((n) => path === n.href || path.startsWith(n.href + "/"));
+  const page = path.startsWith("/checkout")
+    ? { label: "Checkout" }
+    : (NAV[role].find((n) => path === n.href || path.startsWith(n.href + "/")) ?? allNav.find((n) => path === n.href || path.startsWith(n.href + "/")));
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-app-line px-3 md:px-5">
       <IconButton label="Open menu" className="md:hidden" onClick={() => setMobileNav(true)}>
         <List className="size-[18px]" />
       </IconButton>
       <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-app-muted">
-        <span className="hidden sm:inline">{role === "FARMER" ? "Hollins Farm" : "FarmNomad"}</span>
+        <span className="hidden sm:inline">{ROLE_META[role].workspace}</span>
         <span className="hidden text-app-faint sm:inline">/</span>
         <span className="truncate font-medium text-app-text">{page?.label ?? "FarmNomad"}</span>
       </nav>
@@ -213,11 +219,12 @@ function CartButton() {
   );
 }
 
-/** Customer is mobile-first (spec §6): bottom tabs on phones for the four things they do most. */
+/** Customers and drivers are mobile-first (spec §6): bottom tabs on phones for the four things they do most. */
 function TabBar() {
   const path = usePathname();
-  const counts = useCounts("CUSTOMER");
-  const tabs = NAV.CUSTOMER.filter((n) => n.release === "R1");
+  const { role } = useApp();
+  const counts = useCounts(role);
+  const tabs = NAV[role].filter((n) => n.mobile);
   return (
     <nav aria-label="Tabs" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-app-line bg-app-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
       {tabs.map(({ href, label, icon: Icon }) => {

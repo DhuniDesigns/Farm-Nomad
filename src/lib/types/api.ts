@@ -50,6 +50,11 @@ export interface Order {
   paymentStatus: PaymentStatus;
   createdAt: string;
   updatedAt?: string;
+  // CONFIRM WITH BACKEND: drivers need both ends of the run. The mock fills these in.
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  farmerName?: string;
+  donationId?: number;
 }
 
 export interface Surplus {
@@ -59,6 +64,12 @@ export interface Surplus {
   quantity?: number;
   availableQuantity?: number;
   createdAt?: string;
+  // UI enrichments (see Donation).
+  farmerName?: string;
+  coverImageUrl?: string;
+  bestBeforeDate?: string;
+  pickupAddress?: string;
+  claimedByMe?: boolean;
 }
 
 export interface Notification {
@@ -74,7 +85,7 @@ export const PRODUCT_CATEGORIES = ["Vegetables", "Fruit", "Grain", "Dairy", "Mea
 
 /** Product input as the form collects it. The real API takes multipart; see api/farmnomad.ts. */
 export type ProductInput = Pick<Product, "name" | "price" | "quantityAvailable"> &
-  Partial<Pick<Product, "description" | "category" | "bestBeforeDate" | "pickupAddress" | "tags" | "coverImageUrl">>;
+  Partial<Pick<Product, "description" | "category" | "bestBeforeDate" | "pickupAddress" | "tags" | "coverImageUrl" | "imageUrls">>;
 
 // ─── UI-derived helpers (not part of the API) ───
 export type StockState = "active" | "low" | "expiring" | "expired" | "out";
@@ -109,4 +120,50 @@ export interface CheckoutSession {
   checkoutUrl: string;
 }
 
-export type MockRole = Extract<Role, "FARMER" | "CUSTOMER">;
+/** Roles the demo can show. KITCHEN (NomadEat) arrives in R3; ADMIN is a separate console. */
+export type MockRole = Extract<Role, "FARMER" | "CUSTOMER" | "DRIVER" | "ORGANISATION">;
+
+// ─── R2: donations, organisations, messages (spec §2, §3.9–3.12) ───
+export type VerificationLevel = "UNVERIFIED" | "PENDING" | "VERIFIED";
+/** CONFIRM WITH BACKEND: spec types status as a plain string; these are the values the UI expects. */
+export type DonationStatus = "PENDING" | "CLAIMED" | "IN_DELIVERY" | "DELIVERED";
+
+export interface Donation {
+  id: number;
+  productId: number;
+  productName?: string;
+  quantity: number;
+  status?: DonationStatus;
+  farmerId?: number;
+  organisationId?: number | null;
+  createdAt?: string;
+  // UI enrichments: the mock joins these from the product. If the API doesn't, join with GET /products/{id}.
+  farmerName?: string;
+  organisationName?: string | null;
+  coverImageUrl?: string;
+  bestBeforeDate?: string;
+  pickupAddress?: string;
+  note?: string;
+}
+
+export interface Organisation {
+  id: number;
+  name: string;
+  type: OrganisationType;
+  charityNumber?: string;
+  verificationLevel?: VerificationLevel;
+  userId?: number;
+  createdAt?: string;
+  description?: string;
+}
+
+export interface Message {
+  id: number;
+  senderId: number;
+  senderName?: string;
+  recipientId: number;
+  recipientName?: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
