@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { ArrowSquareOut, Desktop, MagnifyingGlass, Moon, SidebarSimple, Sun } from "@phosphor-icons/react/dist/ssr";
+import { ArrowSquareOut, MagnifyingGlass, SidebarSimple } from "@phosphor-icons/react/dist/ssr";
 import { useAssignedOrdersQuery, useGetCartQuery, useKitchenMealOrdersQuery, useMyMealsQuery, useListDonationsQuery, useListFarmerOrdersQuery, useListMyProductsQuery, useMeQuery, useMyMessagesQuery, useMyOrdersQuery, useUnassignedOrdersQuery } from "@/lib/api/farmnomad";
-import { HOME, NAV, ROLE_META, SOON } from "@/lib/navigation";
+import { NAV, ROLE_META, SOON } from "@/lib/navigation";
 import { stockState, type MockRole } from "@/lib/types/api";
 import { cn } from "@/lib/cn";
-import { useApp, type Theme } from "./AppState";
+import { useApp } from "./AppState";
+import { RoleSwitcher } from "./RoleSwitcher";
 import { Avatar, IconButton, Kbd } from "./ui";
 
 /** Re-exported for older imports: the current role's nav. */
@@ -115,7 +116,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       </nav>
 
       <div className="mt-auto grid gap-1 px-2.5 pb-3">
-        {!collapsed && <RoleSwitch />}
+        <RoleSwitcher collapsed={collapsed} />
         <Link
           href="/"
           className={cn("flex h-8 items-center gap-2.5 rounded-[7px] px-2 text-app-muted transition-colors hover:bg-app-hover hover:text-app-text", collapsed && "justify-center px-0")}
@@ -124,13 +125,12 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
           <ArrowSquareOut className="size-[17px] shrink-0" />
           {!collapsed && "FarmNomad website"}
         </Link>
-        {!collapsed ? (
-          <ThemeSwitch />
-        ) : (
+        {collapsed && (
           <IconButton label="Expand sidebar  [" onClick={toggleCollapsed} className="mx-auto">
             <SidebarSimple className="size-4" />
           </IconButton>
         )}
+        <div className="mx-1 my-1 h-px bg-app-line" />
         <Link href="/profile" className={cn("mt-1 flex items-center gap-2.5 rounded-[7px] px-2 py-1.5 transition-colors hover:bg-app-hover", collapsed && "justify-center px-0")}>
           <Avatar name={me?.fullName ?? "FarmNomad"} />
           {!collapsed && (
@@ -188,69 +188,4 @@ export function useCounts(role: MockRole): Record<string, number | undefined> {
     "/orders": cOrders?.filter((o) => ["PENDING", "ASSIGNED", "IN_TRANSIT"].includes(o.status)).length,
     "/messages": unread,
   };
-}
-
-/** Demo only: switch which side of FarmNomad you're looking at. Replaced by real login roles later. */
-function RoleSwitch() {
-  const { role, setRole } = useApp();
-  const router = useRouter();
-  const opts: [MockRole, string][] = [
-    ["FARMER", "Farmer"],
-    ["CUSTOMER", "Customer"],
-    ["DRIVER", "Driver"],
-    ["ORGANISATION", "Food group"],
-    ["KITCHEN", "Kitchen"],
-  ];
-  return (
-    <div className="mb-1 grid gap-1.5 rounded-[9px] p-2 shadow-[0_0_0_1px_var(--a-line)]">
-      <p className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-app-faint">Demo · view as</p>
-      <div role="radiogroup" aria-label="View as" className="grid grid-cols-2 gap-0.5 rounded-[7px] bg-app-hover p-0.5 [&>button]:h-6 [&>button:last-child:nth-child(odd)]:col-span-2">
-        {opts.map(([r, label]) => (
-          <button
-            key={r}
-            role="radio"
-            aria-checked={role === r}
-            onClick={() => {
-              if (role === r) return;
-              setRole(r);
-              router.push(HOME[r]);
-            }}
-            className={cn("relative rounded-[5px] text-ui-sm font-medium transition-colors", role === r ? "text-app-text" : "text-app-faint hover:text-app-muted")}
-          >
-            {role === r && <motion.span layoutId="role-pill" className="absolute inset-0 rounded-[5px] bg-app-panel shadow-[0_0_0_1px_var(--a-line),0_1px_2px_rgb(0_0_0/0.06)]" transition={{ type: "spring", duration: 0.3, bounce: 0 }} />}
-            <span className="relative">{label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ThemeSwitch() {
-  const { theme, setTheme } = useApp();
-  const opts: [Theme, typeof Sun, string][] = [
-    ["system", Desktop, "System theme"],
-    ["light", Sun, "Light theme"],
-    ["dark", Moon, "Dark theme"],
-  ];
-  return (
-    <div role="radiogroup" aria-label="Theme" className="relative grid h-8 grid-cols-3 rounded-[7px] bg-app-hover p-0.5">
-      {opts.map(([t, Icon, label]) => (
-        <button
-          key={t}
-          role="radio"
-          aria-checked={theme === t}
-          aria-label={label}
-          title={label}
-          onClick={() => setTheme(t)}
-          className={cn("relative grid place-items-center rounded-[5px] transition-colors", theme === t ? "text-app-text" : "text-app-faint hover:text-app-muted")}
-        >
-          {theme === t && (
-            <motion.span layoutId="theme-pill" className="absolute inset-0 rounded-[5px] bg-app-panel shadow-[0_0_0_1px_var(--a-line),0_1px_2px_rgb(0_0_0/0.06)]" transition={{ type: "spring", duration: 0.3, bounce: 0 }} />
-          )}
-          <Icon className="relative size-3.5" />
-        </button>
-      ))}
-    </div>
-  );
 }

@@ -27,6 +27,7 @@ import { useForgotPasswordMutation, useLoginMutation, useRegisterMutation } from
 import { HOME, ROLE_META } from "@/lib/navigation";
 import type { MockRole, Role } from "@/lib/types/api";
 import { useApp } from "@/components/app/AppState";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { AuthInput, Checkbox, Chip, Divider, PrimaryButton, Segmented, SoftButton } from "./parts";
 
@@ -168,9 +169,12 @@ export function AuthScreen({ initial }: { initial: AuthMode }) {
             <Image src="/logo-on-light-tight.svg" alt="FarmNomad" width={178} height={36} className="h-6 w-auto dark:hidden" />
             <Image src="/logo-on-dark-tight.svg" alt="FarmNomad" width={178} height={36} className="hidden h-6 w-auto dark:block" />
           </Link>
-          <Link href="/" className="text-ui-sm text-app-faint transition-colors hover:text-app-text">
-            Back to website
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link href="/" className="rounded-[7px] px-2 py-1.5 text-ui-sm text-app-faint transition-colors hover:text-app-text">
+              Back to website
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-10">

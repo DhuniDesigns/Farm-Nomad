@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import { AppState, useApp } from "./AppState";
 import { CommandMenu } from "./CommandMenu";
 import { ProductSheet } from "./ProductSheet";
+import { ThemeToggle } from "./ThemeToggle";
 import { Sidebar, useCounts } from "./Sidebar";
 import { SurplusSheet } from "./SurplusSheet";
 import { IconButton, relDay, time } from "./ui";
@@ -112,6 +113,7 @@ function TopBar() {
       <div className="ml-auto flex items-center gap-1">
         {(role === "CUSTOMER" || role === "KITCHEN") && <CartButton />}
         <Notifications />
+        <ThemeToggle />
       </div>
     </header>
   );
