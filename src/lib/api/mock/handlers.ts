@@ -1,9 +1,9 @@
-import type { CartItem, Notification, Donation, Meal, MealInput, MealOrder, MealOrderStatus, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
+import type { CropScan, CartItem, Notification, Donation, Meal, MealInput, MealOrder, MealOrderStatus, Message, MockRole, Order, OrderStatus, Organisation, Product, ProductInput, Surplus, User } from "@/lib/types/api";
 import * as db from "./db";
 
 // Copies of the sample data. Saved to the browser after every change so a reload (or the
 // Stripe-style redirect at checkout) keeps your cart, orders and edits.
-const KEY = "fn_mock_v4";
+const KEY = "fn_mock_v5";
 const fresh = () => ({
   products: structuredClone(db.products) as Product[],
   orders: structuredClone(db.orders) as Order[],
@@ -32,6 +32,7 @@ const fresh = () => ({
   adminUser: structuredClone(db.adminUser) as User,
   directory: structuredClone(db.directory) as User[],
   otherOrganisations: structuredClone(db.otherOrganisations) as Organisation[],
+  cropScans: [] as CropScan[],
   adminNotifications: [
     { id: 91, recipientId: 1, type: "SYSTEM" as Notification["type"], message: "3 organisations are waiting for verification", read: false, createdAt: new Date().toISOString() },
     { id: 92, recipientId: 1, type: "ORDER_UPDATE" as Notification["type"], message: "2 paid orders have no driver yet", read: false, createdAt: new Date().toISOString() },
@@ -503,6 +504,24 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     return { data: { ...s, assignedTo: org.name } };
   }],
 
+  // ───────── Farmer tools (demo stand-ins for what the backend returns) ─────────
+  ["POST", /^\/crop-scans\/diagnose$/, (_, r) => {
+    const { imageUrl } = (r.body ?? {}) as { imageUrl?: string };
+    if (!imageUrl) return bad("Upload a photo first.");
+    const pick = db.sampleDiagnoses[state.cropScans.length % db.sampleDiagnoses.length];
+    const scan: CropScan = { ...pick, id: nextId(state.cropScans), imageUrl, createdAt: new Date().toISOString() };
+    state.cropScans.unshift(scan);
+    state.cropScans = state.cropScans.slice(0, 12); // keeps browser storage small
+    return { data: scan };
+  }],
+  ["GET", /^\/crop-scans\/my$/, () => ({ data: state.cropScans })],
+  ["DELETE", /^\/crop-scans\/(\d+)$/, (m) => {
+    state.cropScans = state.cropScans.filter((x) => x.id !== +m[1]);
+    return { data: null };
+  }],
+  ["GET", /^\/weather\/conditions$/, (_, r) => ({ data: db.sampleConditions(Number(r.params?.lat ?? 53.76)) })],
+  ["GET", /^\/weather\/planting$/, (_, r) => ({ data: db.samplePlanting(db.sampleConditions(Number(r.params?.lat ?? 53.76)).soilTemp6cm) })],
+
   ["GET", /^\/__mock\/people$/, () => ({ data: Object.entries(db.people).map(([id, p]) => ({ id: +id, ...p })).filter((p) => p.id !== currentUser().id) })],
 
   ["GET", /^\/products\/my$/, () => ({ data: state.products })],
@@ -580,6 +599,16 @@ function allUsers(): User[] {
   return [state.adminUser, state.farmer, state.customer, state.driver, state.orgUser, state.kitchenUser, ...state.directory].sort((a, b) => +new Date(b.createdAt ?? 0) - +new Date(a.createdAt ?? 0));
 }
 
+async function shrink(file: File, max: number) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * k);
+  c.height = Math.round(bmp.height * k);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.8);
+}
+
 function checkMeal(b: Partial<MealInput>) {
   if (!b.name?.trim()) return "Give the meal a name.";
   if (!(Number(b.price) > 0)) return "Set a price above £0.";
@@ -605,6 +634,19 @@ function scheduleReply(from: number, to: number) {
 export async function handle(req: Req): Promise<Res> {
   // Feels like a network: short, slightly variable.
   await new Promise((r) => setTimeout(r, 180 + Math.random() * 220));
+  // POST /uploads: the real one stores the file on Cloudinary. The demo shrinks it to a small
+  // data URL so it survives a reload in browser storage.
+  if (req.method === "POST" && req.path === "/uploads") {
+    const file = req.body instanceof FormData ? req.body.get("file") : null;
+    if (!(file instanceof File) || !file.type.startsWith("image/")) return bad("Choose a photo (JPG, PNG or HEIC).");
+    if (file.size > 15 * 1024 * 1024) return bad("That photo is over 15 MB. Try a smaller one.");
+    try {
+      return { data: { url: await shrink(file, 720) } };
+    } catch {
+      return bad("We couldn't read that photo. Try a JPG or PNG.");
+    }
+  }
+  if (req.path === "/crop-scans/diagnose") await new Promise((r) => setTimeout(r, 900)); // the model takes a moment
   for (const [method, re, fn] of routes) {
     const m = req.path.match(re);
     if (m && method === req.method) {

@@ -1,4 +1,4 @@
-import type { Donation, Meal, MealOrder, Message, Notification, Order, Organisation, Product, Surplus, User } from "@/lib/types/api";
+import type { CropScan, PlantingAdvice, WeatherConditions, Donation, Meal, MealOrder, Message, Notification, Order, Organisation, Product, Surplus, User } from "@/lib/types/api";
 
 // Sample data for the signed-in farmer. Names are illustrative.
 // Dates are generated relative to today so best-before warnings always look current.
@@ -417,3 +417,83 @@ export const otherOrganisations: Organisation[] = [
   { id: 64, name: "Ashton Primary Breakfast Club", type: "SCHOOL", verificationLevel: "PENDING", userId: 604, createdAt: at(-1, 9, 40), description: "Free breakfast for around 60 pupils before school." },
   { id: 65, name: "Avenham Faith Food Share", type: "RELIGIOUS", charityNumber: "1201133", verificationLevel: "PENDING", userId: 605, createdAt: at(0, 8, 5), description: "Weekly hot meals and food parcels run by local faith groups." },
 ];
+
+// ───────── Farmer tools (demo only) ─────────
+// Stand-ins for the farmnomad-ai results the backend returns. The real crop calendar and model
+// live in the AI service; nothing here is used when NEXT_PUBLIC_USE_MOCKS is off.
+
+export const sampleDiagnoses: Omit<CropScan, "id" | "imageUrl" | "createdAt">[] = [
+  {
+    crop: "Tomato",
+    diagnosis: "Early blight",
+    healthy: false,
+    confidence: 0.91,
+    severity: "MODERATE",
+    treatment: [
+      "Pick off spotted lower leaves and bin them, don't compost",
+      "Water at the base in the morning so leaves dry quickly",
+      "If it keeps spreading, use a fungicide approved for tomatoes and follow the label",
+    ],
+    prevention: ["Leave space between plants for air to move", "Mulch so soil doesn't splash onto leaves", "Rotate: no tomatoes or potatoes in this bed for 3 years"],
+  },
+  {
+    crop: "Potato",
+    diagnosis: "Late blight",
+    healthy: false,
+    confidence: 0.86,
+    severity: "HIGH",
+    treatment: [
+      "Cut off and remove infected foliage today, it spreads fast in warm, wet weather",
+      "If tubers are near ready, cut the haulm down and lift after 2–3 weeks",
+      "Don't compost infected plants",
+    ],
+    prevention: ["Plant certified seed and blight-resistant varieties", "Earth up well to protect tubers", "Watch blight warnings (Hutton periods) and spray protectively before them"],
+  },
+  {
+    crop: "Apple",
+    diagnosis: "Healthy",
+    healthy: true,
+    confidence: 0.95,
+    severity: "NONE",
+    treatment: [],
+    prevention: ["Keep checking leaves weekly through the season", "Clear fallen leaves in autumn to cut scab spores"],
+  },
+  {
+    crop: "Strawberry",
+    diagnosis: "Leaf scorch",
+    healthy: false,
+    confidence: 0.58,
+    severity: "LOW",
+    treatment: ["Remove the worst leaves", "Avoid overhead watering"],
+    prevention: ["Cut back old foliage after harvest", "Replace plants every 3–4 years", "Give rows room for air to move"],
+  },
+];
+
+/** November in the North West, roughly. Varies a little with latitude. */
+export function sampleConditions(lat: number): WeatherConditions {
+  const d = (lat - 53.76) * 0.8;
+  const r = (n: number) => Math.round(n * 10) / 10;
+  return { soilTemp6cm: r(7.6 - d), airTemp: r(9.4 - d), frostRisk: lat > 54.2 ? "HIGH" : "MEDIUM", minTempNext7d: r(0.8 - d), rainNext24hMm: 4.2, rainNext7dMm: 23.5, observedAt: new Date().toISOString() };
+}
+
+export function samplePlanting(soil: number): PlantingAdvice {
+  return {
+    readyToPlantOut: [
+      { crop: "Garlic", method: "PLANT_OUT", minSoilTemp: 5, blockers: [], warnings: ["Heavy rain due tomorrow: plant on a ridge or raised bed so cloves don't rot"], notes: "Needs a cold spell to form bulbs, so autumn planting is ideal." },
+      { crop: "Onion sets (autumn)", method: "PLANT_OUT", minSoilTemp: 5, blockers: [], warnings: ["Frost may lift sets: firm them back in after hard nights"] },
+      { crop: "Spring cabbage", method: "PLANT_OUT", minSoilTemp: 5, blockers: [], warnings: ["Net against pigeons over winter"] },
+    ],
+    readyToSow: [
+      { crop: "Broad beans (Aquadulce)", method: "SOW_OUTDOORS", minSoilTemp: 5, blockers: [], warnings: ["If mice have been a problem, sow in modules under cover instead"] },
+      { crop: "Sweet peas", method: "SOW_INDOORS", blockers: [], warnings: [], notes: "Sow in deep pots in a cold frame or unheated greenhouse." },
+      { crop: "Winter salad leaves", method: "SOW_INDOORS", minSoilTemp: 5, blockers: [], warnings: ["Growth will be slow in low light: expect 6–8 weeks to first picking"] },
+    ],
+    notReady: [
+      { crop: "Carrots", method: "SOW_OUTDOORS", minSoilTemp: 10, blockers: [`Soil is ${soil}°C at 6 cm; carrots need about 10°C to germinate well`], warnings: [] },
+      { crop: "Potatoes (first earlies)", method: "PLANT_OUT", minSoilTemp: 7, blockers: ["Frost risk this week", "Plant out from mid-March"], warnings: [] },
+      { crop: "Tomatoes", method: "SOW_INDOORS", blockers: ["Too early: sow indoors from late February"], warnings: [] },
+      { crop: "Courgettes", method: "PLANT_OUT", minSoilTemp: 15, blockers: [`Soil is ${soil}°C; courgettes need 15°C`, "Not frost hardy"], warnings: [] },
+      { crop: "Lettuce (outdoors)", method: "SOW_OUTDOORS", minSoilTemp: 7, blockers: ["Nights below 2°C forecast"], warnings: [] },
+    ],
+  };
+}

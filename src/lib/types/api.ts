@@ -211,3 +211,63 @@ export interface Message {
   read: boolean;
   createdAt: string;
 }
+
+// ─── Farmer tools: crop scanner and weather & planting ───────────────
+// Everything goes through the Spring Boot API (never the farmnomad-ai service directly).
+// CONFIRM WITH BACKEND: paths and fields below follow the agreed contract as described, not a
+// published schema. Adjust here and in src/lib/api/cropScan.api.ts / weather.api.ts if they differ.
+
+/** POST /uploads (multipart, field `file`) → hosted image URL (Cloudinary). */
+export interface UploadResult {
+  url: string;
+}
+
+export type ScanSeverity = "NONE" | "LOW" | "MODERATE" | "HIGH";
+
+/** A diagnosed crop photo. POST /crop-scans/diagnose { imageUrl } returns one and saves it. */
+export interface CropScan {
+  id: number;
+  imageUrl: string;
+  crop?: string; // e.g. "Tomato"
+  diagnosis: string; // disease name, or "Healthy"
+  healthy?: boolean;
+  confidence: number; // 0–1 (spec §10 Q6: confirm the scale; the UI also accepts 0–100)
+  severity?: ScanSeverity;
+  treatment?: string[];
+  prevention?: string[];
+  recommendation?: string; // older single-text field from spec §3.14, shown if the lists are empty
+  createdAt: string;
+}
+
+export type FrostRisk = "NONE" | "LOW" | "MEDIUM" | "HIGH";
+
+/** GET /weather/conditions?lat=&lon= */
+export interface WeatherConditions {
+  soilTemp6cm: number; // °C at 6 cm
+  airTemp?: number; // °C now
+  frostRisk: FrostRisk;
+  minTempNext7d?: number; // °C, lowest forecast night
+  rainNext24hMm: number;
+  rainNext7dMm?: number;
+  observedAt?: string;
+  /** Not returned yet: the 7-day ForecastCard needs a small /conditions extension. Shown when present. */
+  daily?: { date: string; tempMax: number; tempMin: number; rainMm: number }[];
+}
+
+export type PlantingMethod = "SOW_INDOORS" | "SOW_OUTDOORS" | "PLANT_OUT";
+
+export interface CropAdvice {
+  crop: string;
+  method?: PlantingMethod;
+  minSoilTemp?: number; // °C the crop needs
+  blockers: string[]; // why not today, e.g. "Soil is 7°C; needs 10°C"
+  warnings: string[]; // OK to go, but watch out, e.g. "Frost possible on Thursday night: fleece it"
+  notes?: string;
+}
+
+/** GET /weather/planting?lat=&lon= — the 35-crop calendar lives in the AI service. */
+export interface PlantingAdvice {
+  readyToPlantOut: CropAdvice[];
+  readyToSow: CropAdvice[];
+  notReady?: CropAdvice[]; // crops with blockers
+}

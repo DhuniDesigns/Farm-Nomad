@@ -1,4 +1,6 @@
 import {
+  CloudSun,
+  Scan,
   ChartLineUp,
   Leaf,
   SealCheck,
@@ -33,6 +35,8 @@ export const NAV: Record<MockRole, NavItem[]> = {
     { href: "/orders", label: "Orders", icon: Receipt, key: "O", release: "R1" },
     { href: "/surplus/manage", label: "Surplus", icon: HandHeart, key: "S", release: "R2" },
     { href: "/donations/manage", label: "Donations", icon: Gift, key: "G", release: "R2" },
+    { href: "/weather", label: "Weather & Planting", icon: CloudSun, key: "W", release: "R3" },
+    { href: "/crop-scanner", label: "Crop scanner", icon: Scan, key: "X", release: "R3" },
     { href: "/messages", label: "Messages", icon: ChatsCircle, key: "I", release: "R2" },
     { href: "/profile", label: "Profile", icon: UserCircle, key: "U", release: "R1" },
   ],
@@ -105,7 +109,7 @@ export const ROLE_META: Record<MockRole, { label: string; workspace: string; dem
  * A trailing "$" means that exact path only, so "/surplus$" doesn't also allow "/surplus/manage".
  */
 const ALLOWED: Record<MockRole, string[]> = {
-  FARMER: ["/dashboard$", "/dashboard/farmer", "/products", "/orders", "/surplus/manage", "/donations/manage", "/marketplace", "/messages", "/profile"],
+  FARMER: ["/dashboard$", "/dashboard/farmer", "/products", "/orders", "/surplus/manage", "/donations/manage", "/weather", "/crop-scanner", "/marketplace", "/messages", "/profile"],
   CUSTOMER: ["/dashboard$", "/marketplace", "/orders", "/cart", "/checkout", "/nomadeat", "/messages", "/profile"],
   DRIVER: ["/dashboard$", "/dashboard/driver", "/jobs", "/messages", "/profile"],
   ADMIN: ["/dashboard$", "/dashboard/admin", "/admin", "/marketplace", "/nomadeat", "/messages", "/profile"],
