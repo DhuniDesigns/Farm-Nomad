@@ -51,7 +51,7 @@ export function ConditionsWidget({ c, thresholds }: { c?: WeatherConditions; thr
             transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
           />
         </div>
-        <p className="mt-1 text-ui-sm text-app-faint">Marks show the soil temperature crops in your list need.</p>
+        <p className="mt-1 text-ui-sm text-app-faint">Marks show the soil temperature crops in the list below need.</p>
       </Tile>
       <Tile icon={<Snowflake weight="duotone" className="size-4" />} label="Frost risk">
         <dd>

@@ -23,6 +23,8 @@ function related(u: User): { href: string; label: string }[] {
       return [
         { href: `/admin/listings?q=${q}`, label: "Their listings" },
         { href: `/admin/orders?q=${q}`, label: "Orders from their farm" },
+        { href: `/admin/crop-scans?farmerId=${u.id}`, label: "Their crop scans" },
+        ...(u.postcode ? [{ href: `/weather?postcode=${encodeURIComponent(u.postcode)}`, label: "Weather at their farm" }] : []),
       ];
     case "CUSTOMER":
       return [{ href: `/admin/orders?q=${q}`, label: "Their orders" }];

@@ -70,6 +70,8 @@ export const NAV: Record<MockRole, NavItem[]> = {
     { href: "/admin/listings", label: "Listings", icon: Package, key: "L", release: "R1" },
     { href: "/admin/verifications", label: "Verifications", icon: SealCheck, key: "V", release: "R2" },
     { href: "/admin/food-rescue", label: "Food rescue", icon: Leaf, key: "F", release: "R2" },
+    { href: "/admin/crop-scans", label: "Crop scans", icon: Scan, key: "X", release: "R3" },
+    { href: "/weather", label: "Weather lookup", icon: CloudSun, key: "W", release: "R3" },
     { href: "/messages", label: "Messages", icon: ChatsCircle, key: "I", release: "R2" },
     { href: "/profile", label: "Profile", icon: UserCircle, release: "R1" },
   ],
@@ -112,7 +114,7 @@ const ALLOWED: Record<MockRole, string[]> = {
   FARMER: ["/dashboard$", "/dashboard/farmer", "/products", "/orders", "/surplus/manage", "/donations/manage", "/weather", "/crop-scanner", "/marketplace", "/messages", "/profile"],
   CUSTOMER: ["/dashboard$", "/marketplace", "/orders", "/cart", "/checkout", "/nomadeat", "/messages", "/profile"],
   DRIVER: ["/dashboard$", "/dashboard/driver", "/jobs", "/messages", "/profile"],
-  ADMIN: ["/dashboard$", "/dashboard/admin", "/admin", "/marketplace", "/nomadeat", "/messages", "/profile"],
+  ADMIN: ["/dashboard$", "/dashboard/admin", "/admin", "/weather", "/marketplace", "/nomadeat", "/messages", "/profile"],
   KITCHEN: ["/dashboard$", "/dashboard/kitchen", "/meals", "/marketplace", "/cart", "/checkout", "/orders", "/nomadeat", "/messages", "/profile"],
   ORGANISATION: ["/dashboard$", "/dashboard/organisation", "/donations$", "/surplus$", "/organisations", "/marketplace", "/messages", "/profile"],
 };

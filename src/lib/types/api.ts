@@ -237,6 +237,10 @@ export interface CropScan {
   prevention?: string[];
   recommendation?: string; // older single-text field from spec §3.14, shown if the lists are empty
   createdAt: string;
+  // For the admin list. CONFIRM WITH BACKEND: GET /crop-scans?farmerId= (ADMIN) isn't in the spec yet.
+  farmerId?: number;
+  farmerName?: string;
+  farmerPostcode?: string;
 }
 
 export type FrostRisk = "NONE" | "LOW" | "MEDIUM" | "HIGH";

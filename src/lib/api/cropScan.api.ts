@@ -6,7 +6,8 @@ import { api } from "./farmnomad";
  *   1. POST /uploads          multipart `file`  → { url }   (Cloudinary; the prerequisite)
  *   2. POST /crop-scans/diagnose { imageUrl }   → CropScan  (backend calls farmnomad-ai and saves it)
  *   3. GET  /crop-scans/my                      → CropScan[]
- *   4. DELETE /crop-scans/{id}
+ *   4. DELETE /crop-scans/{id}            (FARMER own, ADMIN any)
+ *   5. GET /crop-scans?farmerId=           (ADMIN; assumed, not in the spec yet)
  * CONFIRM WITH BACKEND: the diagnose path and response fields.
  */
 const cropScanApi = api.enhanceEndpoints({ addTagTypes: ["CropScan"] }).injectEndpoints({
@@ -24,10 +25,15 @@ const cropScanApi = api.enhanceEndpoints({ addTagTypes: ["CropScan"] }).injectEn
     }),
     myCropScans: b.query<CropScan[], void>({ query: () => "/crop-scans/my", providesTags: ["CropScan"] }),
     deleteCropScan: b.mutation<void, number>({ query: (id) => ({ url: `/crop-scans/${id}`, method: "DELETE" }), invalidatesTags: ["CropScan"] }),
+    // ADMIN: everyone's scans, or one farmer's. CONFIRM WITH BACKEND: GET /crop-scans?farmerId= isn't in the spec yet.
+    allCropScans: b.query<CropScan[], { farmerId?: number } | void>({
+      query: (a) => ({ url: "/crop-scans", params: a?.farmerId ? { farmerId: a.farmerId } : undefined }),
+      providesTags: ["CropScan"],
+    }),
   }),
 });
 
-export const { useUploadImageMutation, useDiagnoseMutation, useMyCropScansQuery, useDeleteCropScanMutation } = cropScanApi;
+export const { useUploadImageMutation, useDiagnoseMutation, useMyCropScansQuery, useDeleteCropScanMutation, useAllCropScansQuery } = cropScanApi;
 
 /** Confidence as 0–100, whichever scale the backend sends (spec §10 Q6). */
 export const confidencePct = (c: number) => Math.round(c <= 1 ? c * 100 : c);

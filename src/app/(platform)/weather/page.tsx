@@ -42,16 +42,19 @@ export default function WeatherPage() {
     }
   }
 
-  // Start from the last postcode used here, else the farm's own postcode.
+  // Start from ?postcode= (admin links), then the last postcode used here, then the farm's own.
   useEffect(() => {
     if (place || !me) return;
+    const fromLink = new URLSearchParams(window.location.search).get("postcode");
     let saved: string | null = null;
     try {
       saved = window.localStorage.getItem(KEY);
     } catch {}
-    const pc = saved ?? me.postcode;
-    if (pc) go(pc, false);
+    const pc = fromLink ?? saved ?? me.postcode;
+    if (pc) go(pc, !fromLink);
   }, [me]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const admin = me?.role === "ADMIN";
 
   const at = place ? { lat: place.lat, lon: place.lon } : undefined;
   const { data: c, isFetching: f1, isError: e1, refetch: r1 } = useConditionsQuery(at!, { skip: !at });
@@ -76,7 +79,10 @@ export default function WeatherPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] pb-16">
-      <PageHeader title="Weather & Planting" description="Soil, frost and rain where you farm, and what you can plant this week." />
+      <PageHeader
+        title={admin ? "Weather lookup" : "Weather & Planting"}
+        description={admin ? "See what any farm sees: enter its postcode. View only." : "Soil, frost and rain where you farm, and what you can plant this week."}
+      />
       <div className="grid gap-6 px-4 md:px-8">
         {/* Location */}
         <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -88,14 +94,14 @@ export default function WeatherPage() {
             <Button type="submit" disabled={looking || !input.trim()}>
               {looking ? "Finding…" : "Update"}
             </Button>
-            {me?.postcode && place?.postcode.replace(/\s/g, "") !== me.postcode.replace(/\s/g, "") && (
+            {!admin && me?.postcode && place?.postcode.replace(/\s/g, "") !== me.postcode.replace(/\s/g, "") && (
               <Button type="button" variant="ghost" onClick={() => go(me.postcode!)}>
                 Use farm postcode
               </Button>
             )}
           </div>
           <p className={cn("text-ui-sm sm:ml-auto", lookupError ? "text-app-red" : "text-app-faint")} aria-live="polite">
-            {lookupError ?? (place ? `Showing ${place.name}, ${place.postcode}` : looking ? "" : !me?.postcode ? "Enter your farm's postcode to start." : "")}
+            {lookupError ?? (place ? `Showing ${place.name}, ${place.postcode}` : looking ? "" : admin ? "Enter a farm's postcode." : !me?.postcode ? "Enter your farm's postcode to start." : "")}
           </p>
         </form>
 

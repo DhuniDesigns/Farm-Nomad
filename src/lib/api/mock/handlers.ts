@@ -3,7 +3,7 @@ import * as db from "./db";
 
 // Copies of the sample data. Saved to the browser after every change so a reload (or the
 // Stripe-style redirect at checkout) keeps your cart, orders and edits.
-const KEY = "fn_mock_v5";
+const KEY = "fn_mock_v6";
 const fresh = () => ({
   products: structuredClone(db.products) as Product[],
   orders: structuredClone(db.orders) as Order[],
@@ -33,6 +33,7 @@ const fresh = () => ({
   directory: structuredClone(db.directory) as User[],
   otherOrganisations: structuredClone(db.otherOrganisations) as Organisation[],
   cropScans: [] as CropScan[],
+  otherCropScans: structuredClone(db.otherCropScans) as CropScan[],
   adminNotifications: [
     { id: 91, recipientId: 1, type: "SYSTEM" as Notification["type"], message: "3 organisations are waiting for verification", read: false, createdAt: new Date().toISOString() },
     { id: 92, recipientId: 1, type: "ORDER_UPDATE" as Notification["type"], message: "2 paid orders have no driver yet", read: false, createdAt: new Date().toISOString() },
@@ -509,15 +510,23 @@ const routes: [string, RegExp, (m: RegExpMatchArray, r: Req) => Res][] = [
     const { imageUrl } = (r.body ?? {}) as { imageUrl?: string };
     if (!imageUrl) return bad("Upload a photo first.");
     const pick = db.sampleDiagnoses[state.cropScans.length % db.sampleDiagnoses.length];
-    const scan: CropScan = { ...pick, id: nextId(state.cropScans), imageUrl, createdAt: new Date().toISOString() };
+    const scan: CropScan = { ...pick, id: nextId(state.cropScans), imageUrl, createdAt: new Date().toISOString(), farmerId: state.farmer.id, farmerName: "Hollins Farm", farmerPostcode: state.farmer.postcode ?? undefined };
     state.cropScans.unshift(scan);
     state.cropScans = state.cropScans.slice(0, 12); // keeps browser storage small
     return { data: scan };
   }],
   ["GET", /^\/crop-scans\/my$/, () => ({ data: state.cropScans })],
   ["DELETE", /^\/crop-scans\/(\d+)$/, (m) => {
+    // FARMER (own) or ADMIN (any), spec §3.14.
     state.cropScans = state.cropScans.filter((x) => x.id !== +m[1]);
+    if (role() === "ADMIN") state.otherCropScans = state.otherCropScans.filter((x) => x.id !== +m[1]);
     return { data: null };
+  }],
+  // ADMIN: every farmer's scans, optionally for one farmer. CONFIRM WITH BACKEND: not in the spec yet.
+  ["GET", /^\/crop-scans$/, (_, r) => {
+    const fid = r.params?.farmerId ? Number(r.params.farmerId) : null;
+    const all = [...state.cropScans.map((x) => ({ ...x, farmerId: x.farmerId ?? state.farmer.id, farmerName: x.farmerName ?? "Hollins Farm", farmerPostcode: x.farmerPostcode ?? state.farmer.postcode ?? undefined })), ...state.otherCropScans];
+    return { data: (fid ? all.filter((x) => x.farmerId === fid) : all).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)) };
   }],
   ["GET", /^\/weather\/conditions$/, (_, r) => ({ data: db.sampleConditions(Number(r.params?.lat ?? 53.76)) })],
   ["GET", /^\/weather\/planting$/, (_, r) => ({ data: db.samplePlanting(db.sampleConditions(Number(r.params?.lat ?? 53.76)).soilTemp6cm) })],

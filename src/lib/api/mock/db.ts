@@ -497,3 +497,39 @@ export function samplePlanting(soil: number): PlantingAdvice {
     ],
   };
 }
+
+/** Demo leaf "photos": drawn, not real, so the admin list has something to show. */
+function leafSvg(leaf: string, spot: string, seed: number) {
+  const spots = Array.from({ length: 9 }, (_, i) => {
+    const a = (seed * 37 + i * 61) % 100;
+    const x = 140 + ((a * 3.1) % 120);
+    const y = 70 + ((a * 7.3 + i * 17) % 150);
+    const r = 6 + ((a + i) % 9);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="${spot}" opacity="0.85"/>`;
+  }).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#3f5c30"/><ellipse cx="200" cy="150" rx="105" ry="128" fill="${leaf}"/><line x1="200" y1="28" x2="200" y2="278" stroke="#4d7236" stroke-width="5"/>${spot ? spots : ""}</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const scan = (id: number, d: number, h: number, farmerId: number, farmerName: string, farmerPostcode: string, i: number, conf?: number): CropScan => ({
+  ...sampleDiagnoses[i],
+  ...(conf !== undefined && { confidence: conf }),
+  id,
+  imageUrl: leafSvg(sampleDiagnoses[i].healthy ? "#6fae4c" : "#7fa04f", sampleDiagnoses[i].healthy ? "" : sampleDiagnoses[i].severity === "HIGH" ? "#3b2a1a" : "#7a5530", id),
+  createdAt: at(d, h, (id * 13) % 60),
+  farmerId,
+  farmerName,
+  farmerPostcode,
+});
+
+/** Other farmers' scans, for the admin view. A late-blight cluster sits around Preston this week. */
+export const otherCropScans: CropScan[] = [
+  scan(9101, 0, 9, 12, "Moss Lane Farm", "L39 4SY", 1),
+  scan(9102, -1, 15, 13, "Fylde Growers", "PR4 2HA", 1, 0.82),
+  scan(9103, -2, 11, 11, "Ribble Fruit", "PR3 3XL", 3),
+  scan(9104, -2, 8, 13, "Fylde Growers", "PR4 2HA", 0),
+  scan(9105, -4, 14, 11, "Ribble Fruit", "PR3 3XL", 2),
+  scan(9106, -6, 10, 14, "Bowland Dairy", "BB7 3AU", 1, 0.74),
+  scan(9107, -12, 16, 12, "Moss Lane Farm", "L39 4SY", 0, 0.88),
+  scan(9108, -20, 12, 14, "Bowland Dairy", "BB7 3AU", 2),
+];
